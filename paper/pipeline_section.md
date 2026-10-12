@@ -14,7 +14,7 @@ The monitor tracks the number of flows per window with an exponentially weighted
 
 z = (x − μ) / max(σ, 1)
 
-The floor of one flow on σ keeps the z-score finite when early traffic is nearly constant. The first ten windows are a warm-up period: the state stays NORMAL and every window updates the baseline.
+The floor of one flow on σ keeps the z-score finite when early traffic is nearly constant. Tier 1 monitors flow rate only; packet and byte rates are recorded per window but not used for state changes. The first ten windows are a warm-up period: the state stays NORMAL and every window updates the baseline.
 
 After warm-up, the monitor enters ELEVATED when z > 3 for three consecutive windows. It returns to NORMAL when z < 2 for five consecutive windows. The baseline is updated only from NORMAL windows whose z-score is at most 3. It is never updated while the state is ELEVATED, or during the high-z windows just before a transition. Without this rule, attack traffic would become the new baseline, and the first spike window would inflate the variance enough to keep later spike windows below the threshold.
 
