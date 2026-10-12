@@ -18,6 +18,7 @@ MUTED = "#898781"
 GRID = "#2c2c2a"
 AXIS = "#383835"
 SERIES = "#d6d5ce"  # the one data colour
+NEON = "#b4f23c"  # buttons only: controls glow, data never does
 
 GOOD = "#0ca30c"
 WARNING = "#fab219"
@@ -26,7 +27,31 @@ STATE_COLORS = {"NORMAL": GOOD, "ELEVATED": CRITICAL}
 
 CSS = f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@600;700&display=swap');
+
+/* neon buttons: primary = filled lime, secondary = outlined lime; both glow */
+.stButton button, .stLinkButton a, [data-testid^="stBaseButton"], [data-testid^="stBaseLinkButton"] {{
+  font-family: 'Orbitron', 'Inter', sans-serif !important; font-weight: 700 !important;
+  text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem !important;
+  border-radius: 999px !important; min-height: 34px; padding: 4px 16px !important;
+  border: 2px solid {NEON} !important; background: #0b0b0a !important; color: {INK} !important;
+  box-shadow: 0 0 8px rgba(180,242,60,.45), 0 0 18px rgba(180,242,60,.18) !important;
+  transition: box-shadow .15s ease, transform .15s ease, background .15s ease;
+}}
+.stButton button p, .stLinkButton a p, [data-testid^="stBaseButton"] p {{
+  font-family: inherit !important; font-size: inherit !important; font-weight: inherit !important; }}
+.stButton button:hover, .stLinkButton a:hover, [data-testid^="stBaseButton"]:hover {{
+  color: {NEON} !important; transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(180,242,60,.75), 0 0 28px rgba(180,242,60,.32) !important;
+}}
+.stButton button[data-testid="stBaseButton-primary"], .stLinkButton a[data-testid="stBaseLinkButton-primary"] {{
+  background: {NEON} !important; color: #0b0b0a !important;
+}}
+.stButton button[data-testid="stBaseButton-primary"]:hover {{ background: #c8ff5a !important; color: #0b0b0a !important; }}
+.stButton button:focus-visible {{ outline: 2px solid {NEON} !important; outline-offset: 3px; }}
+.stButton button:disabled {{ opacity: .35; box-shadow: none !important; transform: none; }}
+[data-testid="stNumberInputStepUp"]:hover, [data-testid="stNumberInputStepDown"]:hover {{
+  color: {NEON} !important; background: transparent !important; }}
 
 html, body, [class*="css"], .stMarkdown, button, input, textarea {{
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -59,7 +84,7 @@ h1, h2, h3, h4 {{ color: {INK}; letter-spacing: -0.01em; }}
 
 /* header */
 .fl-header {{ display:flex; align-items:center; justify-content:space-between; gap:16px;
-  flex-wrap:wrap; margin-bottom: 18px; }}
+  flex-wrap:wrap; margin-bottom: 4px; }}
 .fl-brand {{ display:flex; align-items:center; gap:12px; }}
 .fl-logo {{ width:36px; height:36px; border-radius:9px; background:{SURFACE_2};
   border:1px solid {BORDER}; display:grid; place-items:center; }}

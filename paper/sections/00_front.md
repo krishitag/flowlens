@@ -1,0 +1,10 @@
+# FlowLens: Explainable Real-Time Network Anomaly Detection with TreeSHAP and Two-Tier Monitoring
+
+[Author 1] · [Author 2] · [Author 3]
+School of Computer Science and Engineering, Vellore Institute of Technology
+
+## Abstract
+
+Network monitoring tools usually separate traffic visibility from security alerting. When a machine-learning detector raises an alert, the analyst receives a label but no reason. Explainable intrusion detection work commonly attaches SHAP explanations to such alerts, but mostly offline and with Kernel SHAP, a model-agnostic estimator that is far too slow to run per connection on live traffic. We argue that per-flow explanations are cheap enough for real-time monitoring when two design choices are combined: tree-based detectors explained with TreeSHAP, which computes exact Shapley values in polynomial time, and a two-tier architecture that runs full scoring and explanation only when traffic is abnormal. We implement this design as FlowLens, which replays labelled CIC-IDS2017 flows as a one-second-window stream. An EWMA monitor switches between NORMAL and ELEVATED states. LightGBM classifies known attack types, an Isolation Forest flags unseen ones, and TreeSHAP turns the top contributing features into plain-language sentences shown on a live dashboard. LightGBM reaches a macro F1 of [lgbm_macro_f1] with a benign false-positive rate of [lgbm_benign_fpr]. TreeSHAP explains a flow in [tree_p50] ms at the median, against [kernel_p50] ms for Kernel SHAP, a [shap_speedup]× speed-up. End-to-end processing stays at [p95_e2e_ms] ms per one-second window at the 95th percentile under stress load. On the [holdout_class] class, withheld from training, recall was [holdout_lgbm_recall] for LightGBM alone, [holdout_iforest_recall] for the Isolation Forest alone, and [holdout_either_recall] for the two combined. We report the trade-off honestly: low-and-slow attacks that do not change traffic volume are caught only at the sampling rate.
+
+**Keywords:** intrusion detection, explainable AI, SHAP, TreeSHAP, LightGBM, Isolation Forest, real-time monitoring, CIC-IDS2017

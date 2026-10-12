@@ -21,6 +21,7 @@ from results import results_tab
 
 ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "events.db"
+REPO_URL = "https://github.com/krishitag/flowlens"
 Z_ON, Z_OFF = 3.0, 2.0  # Tier-1 thresholds (PLAN.md section 2), drawn on the z-score panel
 
 st.set_page_config(page_title="FlowLens", page_icon="🛰️", layout="wide", initial_sidebar_state="auto")
@@ -50,6 +51,16 @@ def seconds_since_write():
 def is_low_confidence(row):
     """Both models ran (if_score present) but only one of them flagged the flow."""
     return pd.notna(row["if_score"]) and row["source"] in ("lgbm", "iforest")
+
+
+def step_alert(delta, latest_id):
+    """Prev/Next/Latest buttons: move the pinned alert ID (0 = follow the newest)."""
+    if delta == 0:
+        st.session_state.alert_id = 0
+        return
+    current = st.session_state.get("alert_id") or latest_id
+    new = max(1, current + delta)
+    st.session_state.alert_id = 0 if new >= latest_id else new
 
 
 def elevated_spans(windows):
@@ -191,15 +202,22 @@ def alert_table(alerts):
 
 
 def explanation_panel(latest_id):
-    ctrl, hint = st.columns([1, 4])
+    ctrl, prev, nxt, latest, hint = st.columns([1.1, 0.75, 0.75, 0.9, 3], vertical_alignment="bottom")
     with ctrl:
         # a number input, not a selectbox: its options would change every refresh and reset the pick
         choice = st.number_input("Alert ID", min_value=0, step=1, key="alert_id",
                                  help="0 follows the newest alert. Take any ID from the table above.")
+    current = latest_id if choice == 0 else int(choice)
+    prev.button("◀ Prev", on_click=step_alert, args=(-1, latest_id), width="stretch",
+                disabled=current <= 1, help="Previous alert")
+    nxt.button("Next ▶", on_click=step_alert, args=(1, latest_id), width="stretch",
+               disabled=choice == 0, help="Next alert")
+    latest.button("Latest", on_click=step_alert, args=(0, latest_id), width="stretch",
+                  type="primary" if choice != 0 else "secondary", help="Follow the newest alert")
     with hint:
-        ui.html(f'<div style="color:{ui.MUTED};font-size:0.8rem;padding-top:34px">'
-                + ("Following the newest alert. Enter an ID to pin one, and pause live updates while presenting."
-                   if choice == 0 else "Pinned. Set the ID back to 0 to follow the newest alert.") + "</div>")
+        ui.html(f'<div style="color:{ui.MUTED};font-size:0.8rem;padding-bottom:8px">'
+                + ("Following the newest alert. Step back with Prev, or pause live updates while presenting."
+                   if choice == 0 else "Pinned. Press Latest to follow the newest alert again.") + "</div>")
 
     alert_id = latest_id if choice == 0 else int(choice)
     row = query("SELECT * FROM alerts WHERE id = ?", (alert_id,))
@@ -344,8 +362,15 @@ def sidebar():
             f'<div class="fl-logo" style="width:30px;height:30px">{ui.LOGO}</div>'
             f'<div style="font-weight:700;color:{ui.INK}">FlowLens</div></div>')
     ui.html('<div class="fl-side-h">Controls</div>')
-    paused = st.toggle("Pause live updates", help="Freeze the view while you talk through an alert.")
+    paused = st.session_state.get("paused", False)
+    st.button("▶ Resume live" if paused else "❚❚ Pause live", key="pause_btn", on_click=toggle_pause,
+              type="primary" if paused else "secondary", width="stretch",
+              help="Freeze the view while you talk through an alert.")
     return paused
+
+
+def toggle_pause():
+    st.session_state.paused = not st.session_state.get("paused", False)
 
 
 # ---------- how it works ----------
@@ -385,7 +410,11 @@ def how_it_works():
 
 # ---------- page ----------
 
-ui.header()
+brand, links = st.columns([5, 1], vertical_alignment="center")
+with brand:
+    ui.header()
+with links:
+    st.link_button("GitHub ↗", REPO_URL, width="stretch")
 with st.sidebar:
     paused = sidebar()
     refresh = None if paused else 1  # seconds
