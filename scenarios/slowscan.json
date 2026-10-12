@@ -1,0 +1,8 @@
+{
+  "window_s": 1,
+  "segments": [
+    {"label": "BENIGN",   "rate": 40, "duration": 30},
+    {"label": "PortScan", "rate": 45, "duration": 30, "benign_mix": 0.89},
+    {"label": "BENIGN",   "rate": 40, "duration": 20}
+  ]
+}

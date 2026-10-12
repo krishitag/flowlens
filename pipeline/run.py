@@ -4,6 +4,7 @@
 """
 import argparse
 import math
+import time
 from pathlib import Path
 
 import numpy as np
@@ -29,26 +30,26 @@ def percentile(values, q):
     return float(np.percentile(values, q)) if values else None
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", required=True)
-    parser.add_argument("--speed", type=float, default=1.0)
-    parser.add_argument("--db", default="data/events.db")
-    args = parser.parse_args()
+def run_pipeline(scenario, speed=1.0, db="data/events.db", verbose=True):
+    """Run a scenario end to end into `db` (deleted first).
 
+    Returns one stats dict per window: ts, state, flows, scored, explained,
+    detect_ms and explain_ms (per flow, this window) and e2e_ms (whole window).
+    """
     # fresh DB every run (including WAL side files)
     for suffix in ["", "-wal", "-shm"]:
-        Path(args.db + suffix).unlink(missing_ok=True)
+        Path(str(db) + suffix).unlink(missing_ok=True)
 
-    store = Store(args.db)
+    store = Store(db)
     monitor = Monitor()
     detector = Detector()
     explainer = Explainer()
 
-    total_flows = 0
+    stats = []
     detect_ms, explain_ms = [], []
 
-    for ts, window in replay(args.scenario, speed=args.speed):
+    for ts, window in replay(scenario, speed=speed):
+        start = time.perf_counter()
         z, state = monitor.update(len(window))
         flagged, scored = detector.detect(window, state)
         explained = explainer.explain(flagged, flagged["pred_label"], flagged["source"])
@@ -83,16 +84,26 @@ def main():
         })
         store.insert_alerts(alerts)
 
-        total_flows += len(window)
+        stats.append({
+            "ts": float(ts),
+            "state": state,
+            "flows": len(window),
+            "scored": scored,
+            "explained": len(alerts),
+            "detect_ms": detector.last_detect_ms,
+            "explain_ms": alerts[0]["explain_ms"] if alerts else 0.0,
+            "e2e_ms": (time.perf_counter() - start) * 1000,
+        })
         detect_ms += [a["detect_ms"] for a in alerts]
         explain_ms += [a["explain_ms"] for a in alerts]
-        print(f"ts={ts:>5.0f}  {state:<8}  z={z:>7.2f}  flows={len(window):>4}  scored={scored:>4}  alerts={len(alerts):>4}")
+        if verbose:
+            print(f"ts={ts:>5.0f}  {state:<8}  z={z:>7.2f}  flows={len(window):>4}  scored={scored:>4}  alerts={len(alerts):>4}")
 
     # latency percentiles are over alerted flows (the ones that were both scored and explained)
     meta = {
-        "scenario": args.scenario,
-        "speed": args.speed,
-        "total_flows": total_flows,
+        "scenario": str(scenario),
+        "speed": speed,
+        "total_flows": sum(s["flows"] for s in stats),
         "total_alerts": len(explain_ms),
         "detect_ms_p50": percentile(detect_ms, 50),
         "detect_ms_p95": percentile(detect_ms, 95),
@@ -102,7 +113,18 @@ def main():
     for key, value in meta.items():
         store.set_meta(key, value)
     store.close()
-    print(meta)
+    if verbose:
+        print(meta)
+    return stats
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scenario", required=True)
+    parser.add_argument("--speed", type=float, default=1.0)
+    parser.add_argument("--db", default="data/events.db")
+    args = parser.parse_args()
+    run_pipeline(args.scenario, args.speed, args.db)
 
 
 if __name__ == "__main__":

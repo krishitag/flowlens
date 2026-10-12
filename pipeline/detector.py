@@ -22,6 +22,7 @@ class Detector:
         self.col_label = np.array([labels.get(str(c), str(c)) for c in self.lgbm.classes_])
         self.normal_sample = normal_sample
         self.rng = np.random.default_rng(seed)
+        self.last_detect_ms = 0.0  # per-flow time of the last detect() call, even if nothing was flagged
 
     def detect(self, window_df, state):
         """Return (flagged_df, scored_count).
@@ -37,14 +38,19 @@ class Detector:
             k = round(len(window_df) * self.normal_sample)
             scored = window_df.iloc[np.sort(self.rng.choice(len(window_df), k, replace=False))]
         n = len(scored)
+        self.last_detect_ms = 0.0
         if n == 0:
-            return window_df.iloc[:0].copy(), 0
+            empty = window_df.iloc[:0].copy()
+            for col in ["pred_label", "pred_prob", "if_score", "source", "detect_ms"]:
+                empty[col] = []
+            return empty, 0
 
         X = scored[self.features]
         start = time.perf_counter()
         proba = self.lgbm.predict_proba(X)
         if_score = self.iforest.score_samples(X) if elevated else np.full(n, np.nan)
         detect_ms = (time.perf_counter() - start) * 1000 / n
+        self.last_detect_ms = detect_ms
 
         cols = proba.argmax(axis=1)
         pred_label = self.col_label[cols]

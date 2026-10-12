@@ -1,0 +1,10 @@
+{
+  "window_s": 1,
+  "segments": [
+    {"label": "BENIGN",   "rate": 200,  "duration": 20},
+    {"label": "DoS",      "rate": 2000, "duration": 20, "benign_mix": 0.3},
+    {"label": "DDoS",     "rate": 2000, "duration": 20},
+    {"label": "PortScan", "rate": 1000, "duration": 20},
+    {"label": "BENIGN",   "rate": 200,  "duration": 20}
+  ]
+}
