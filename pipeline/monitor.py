@@ -13,7 +13,7 @@ MIN_STD = 1.0  # one flow; keeps z finite when early traffic is perfectly steady
 
 
 class Monitor:
-    def __init__(self, alpha=0.1, z_on=3.0, on_windows=3, z_off=1.0, off_windows=10, warmup=10):
+    def __init__(self, alpha=0.1, z_on=3.0, on_windows=3, z_off=2.0, off_windows=5, warmup=10):
         self.alpha = alpha
         self.z_on, self.on_windows = z_on, on_windows
         self.z_off, self.off_windows = z_off, off_windows

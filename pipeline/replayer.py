@@ -12,7 +12,7 @@ import pandas as pd
 def replay(scenario_path, test_path="data/processed/test.parquet", speed=1.0, seed=0):
     """Yield (ts, window_df) once per window.
 
-    Each window of a segment has rate * window_s flows: (1 - benign_mix) from the
+    Each window of a segment has Poisson(rate * window_s) flows: (1 - benign_mix) from the
     segment's label and the rest from BENIGN, sampled with replacement.
     window_df has every test.parquet column plus flow_idx (row index in test.parquet).
     ts = simulated seconds since start. speed 1 = real time, N = N times faster, 0 = no sleeping.
@@ -31,10 +31,10 @@ def replay(scenario_path, test_path="data/processed/test.parquet", speed=1.0, se
         label = seg["label"]
         if label not in rows_by_label or "BENIGN" not in rows_by_label:
             raise ValueError(f"test.parquet has no rows for {label!r} or BENIGN")
-        n_flows = round(seg["rate"] * window_s)
-        n_label = round(n_flows * (1 - seg.get("benign_mix", 0)))
-
         for _ in range(round(seg["duration"] / window_s)):
+            # Poisson count so calm traffic has natural window-to-window variation
+            n_flows = rng.poisson(seg["rate"] * window_s)
+            n_label = round(n_flows * (1 - seg.get("benign_mix", 0)))
             idx = np.concatenate([
                 rng.choice(rows_by_label[label], n_label),
                 rng.choice(rows_by_label["BENIGN"], n_flows - n_label),

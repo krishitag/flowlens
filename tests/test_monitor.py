@@ -32,17 +32,20 @@ def test_sustained_spike_flips_after_3_windows():
     assert states(m, [CALM * 10] * 5) == ["NORMAL", "NORMAL", "ELEVATED", "ELEVATED", "ELEVATED"]
 
 
-def test_returns_to_normal_only_after_10_calm_windows():
+def test_returns_to_normal_only_after_off_windows_calm_windows():
     m = warmed_up()
+    off = m.off_windows
     states(m, [CALM * 10] * 20)
     assert m.state == "ELEVATED"
-    assert states(m, [CALM] * 10) == ["ELEVATED"] * 9 + ["NORMAL"]
+    assert states(m, [CALM] * off) == ["ELEVATED"] * (off - 1) + ["NORMAL"]
 
 
 def test_calm_streak_resets_on_a_spike():
     m = warmed_up()
+    off = m.off_windows
     states(m, [CALM * 10] * 5)
-    assert states(m, [CALM] * 9 + [CALM * 10] + [CALM] * 9) == ["ELEVATED"] * 19
+    calm = [CALM] * (off - 1)
+    assert states(m, calm + [CALM * 10] + calm) == ["ELEVATED"] * (2 * off - 1)
     assert states(m, [CALM]) == ["NORMAL"]
 
 
