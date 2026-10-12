@@ -76,8 +76,4 @@ python ml/evaluate.py
 
 ## Status
 
-| Part | Owner | State |
-|---|---|---|
-| ML: data prep, models, evaluation | Member 1 | Not started in repo |
-| Pipeline: replay, monitor, detect, explain, store | Member 2 | Code done and tested on fake models; waiting for real models |
-| Dashboard, paper, slides | Member 3 | Not started in repo |
+Progress for every task is tracked in [docs/STATUS.md](docs/STATUS.md). Update your rows there when you push.

@@ -24,6 +24,16 @@ Never rename columns, tables, files or JSON keys from these contracts. If a task
 - Never commit anything under `data/`.
 - Keep code simple and readable; this is a 2-day university project, not production.
 - After implementing a task, tell the user the exact command to verify its "done when" condition from PLAN.md.
+
+## Progress tracking (do this automatically, without being asked)
+`docs/STATUS.md` is the team's progress tracker. Whenever you finish a task, partly finish one, or find a new blocker:
+1. Update that task's row in `docs/STATUS.md`: the status emoji (✅ 🟡 ⏳ ⬜) and a short note.
+2. Update the **Blockers** and **Checkpoints** tables if they're affected.
+3. Set the "Last updated" line to today's date and the member's role.
+4. Edit only the current member's rows, plus Blockers, Checkpoints and Shared. Never mark another member's task as done.
+5. Tell the user you updated STATUS.md, so it goes into the same commit as the work.
+
+Ask the user which member they are if it isn't clear. `docs/STATUS.md` is the one shared file every member may edit without team approval, and only for status updates.
 - `tests/make_fake_models.py` writes fake `models/*` and `test.parquet` for development. Never commit them, and never run it once real models are in `models/`.
 
 ## Commands

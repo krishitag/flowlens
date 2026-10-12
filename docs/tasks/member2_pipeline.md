@@ -16,13 +16,7 @@ Branch prefix: `pipeline/` (for example `pipeline/explainer`). Commit messages s
 
 ## Current status
 
-| Task | State |
-|---|---|
-| M2.1 store, M2.2 replayer, M2.3 monitor, M2.7 scenarios, M2.9 tests | ✅ Done (`pytest tests/ -q`: 18 pass) |
-| M2.4 detector, M2.5 explainer | Code done. Needs a rerun on Member 1's v0 models |
-| M2.6 run.py | Code done; `--speed 1` keeps up with real time. Needs a run with Member 3's dashboard open (Checkpoint B) |
-| M2.8 latency report | Script done (`python -m pipeline.latency_report --scenario scenarios/stress.json`). Rerun on the real models |
-| M2.10 paper section | Drafted in `paper/pipeline_section.md`. Fill in the `[placeholders]` with the real numbers |
+Per-task status is in [docs/STATUS.md](../STATUS.md).
 
 **Once the real models land:**
 1. `python -m pipeline.explainer` (the IForest sign correlation should be strongly positive)
