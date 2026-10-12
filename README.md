@@ -62,7 +62,11 @@ pytest tests/ -q                                                     # unit test
 streamlit run dashboard/app.py
 ```
 
-(Member 3, in progress.)
+Open http://localhost:8501, then start the pipeline in a second terminal. The dashboard refreshes every second and copes with the DB being recreated, so you can start them in either order.
+
+- **Live tab:** state badge, flows/s and packets/s, alerts in the last 60 s, a traffic chart (ELEVATED periods shaded red, z-score on the right axis), the last 50 alerts, and the explanation for one alert. Enter an alert ID from the table to inspect it, or leave it at 0 to follow the newest.
+- **Sidebar:** detect/explain latency p50/p95, % of flows scored and explained per state, and the run summary once the run ends. **Pause live updates** freezes the view while you talk through an alert in the demo.
+- **Results tab:** `reports/*.json` and `reports/figures/*.png`, with a "not available yet" note for anything missing. Reload the page after new reports land.
 
 ## Train the models
 
