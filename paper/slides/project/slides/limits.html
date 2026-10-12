@@ -1,0 +1,26 @@
+<section id="limits" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Limitations</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15">What tiering trades away, and what we can't claim</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #e5534b;border-radius:16px;padding:40px">
+<h3 style="font-size:32px;font-weight:600">Low-and-slow attacks</h3>
+<p style="font-size:26px;color:#c3c2b7;line-height:1.4">A slow port scan barely changes volume. In slowscan.json the monitor stayed NORMAL for the whole run, so the scan was caught only by the 10% sample.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:40px">
+<h3 style="font-size:32px;font-weight:600">Dataset artefacts</h3>
+<p style="font-size:26px;color:#c3c2b7;line-height:1.4">CIC-IDS2017 is a testbed capture with known labelling issues. We exclude ports, IPs and timestamps from features, but real networks may score lower.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:40px">
+<h3 style="font-size:32px;font-weight:600">Replayed, not captured</h3>
+<p style="font-size:26px;color:#c3c2b7;line-height:1.4">Latency excludes packet capture and flow-feature extraction, which a deployment would add.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:40px">
+<h3 style="font-size:32px;font-weight:600">Not user-tested</h3>
+<p style="font-size:26px;color:#c3c2b7;line-height:1.4">We measure how fast explanations are, not how much they help analysts. That needs a user study.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 12</p>
+<aside>Be upfront. The slow scan is the deliberate cost of tiering, and we can demo it with scenarios/slowscan.json. Volume-independent Tier-1 triggers are the natural next step.</aside>
+</section>

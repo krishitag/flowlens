@@ -1,0 +1,28 @@
+<section id="tiers" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Two-tier design</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15">Heavy work only when traffic is abnormal</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:48px">
+<h3 style="font-size:44px;font-weight:600">Tier 1 · EWMA monitor</h3>
+<ul style="font-size:32px;color:#c3c2b7;line-height:1.5">
+<li>z-score of flows per window, α = 0.1</li>
+<li><span style="color:#e5534b">ELEVATED</span> after 3 windows with z &gt; 3</li>
+<li><span style="color:#3fb950">NORMAL</span> after 5 windows with z &lt; 2</li>
+<li>Baseline frozen while ELEVATED</li>
+</ul>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:48px">
+<h3 style="font-size:44px;font-weight:600">Tier 2 · detector</h3>
+<ul style="font-size:32px;color:#c3c2b7;line-height:1.5">
+<li>NORMAL: LightGBM on a 10% sample</li>
+<li>ELEVATED: every flow, LightGBM and Isolation Forest</li>
+<li>Flag: attack class with p ≥ 0.5, or IForest past its threshold</li>
+</ul>
+</div>
+</div>
+<p style="font-size:24px;color:#8f8d86;line-height:1.4;width:1600px">Exit rule changed from z &lt; 1 for 10 windows: in 200 simulated demo runs it returned to NORMAL before the end in 38% of runs, against 100% for z &lt; 2 for 5.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 06</p>
+<aside>Tier 1 is deliberately cheap: one number per window. The baseline only learns from calm windows, so an attack never becomes the new normal. Tier 2 is where the models run. The Isolation Forest is trained on benign traffic only, so it can flag attacks LightGBM has never seen. Mention the exit-rule change and the simulation behind it.</aside>
+</section>

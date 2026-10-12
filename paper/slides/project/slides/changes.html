@@ -1,0 +1,17 @@
+<section id="changes" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Since Review 1</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15">What changed, and why</h2>
+</div>
+<table style="font-size:26px;color:#c3c2b7;font-family:'IBM Plex Sans', Arial, sans-serif">
+<tr style="background:#1a1a19"><th style="width:34%;color:#8f8d86">Review 1</th><th style="width:36%;color:#ededeb">Now</th><th style="width:30%;color:#8f8d86">Why</th></tr>
+<tr><td>"SHAP is too slow, so we avoid it"</td><td style="color:#ededeb">TreeSHAP, benchmarked against Kernel SHAP</td><td>The slow one is Kernel SHAP</td></tr>
+<tr><td>Custom traffic simulator</td><td style="color:#ededeb">Replay of real CIC-IDS2017 flows</td><td>Real features and labels</td></tr>
+<tr><td>"Predictive" framework</td><td style="color:#ededeb">Removed</td><td>Nothing predicts future traffic</td></tr>
+<tr><td>Random Forest or Isolation Forest</td><td style="color:#ededeb">LightGBM and Isolation Forest; RF as baseline</td><td>Known and unseen attacks</td></tr>
+<tr><td>"Realistic datasets" (unnamed)</td><td style="color:#ededeb">CIC-IDS2017 with leave-one-attack-out</td><td>Named and reproducible</td></tr>
+<tr><td>Analyst usability metric</td><td style="color:#ededeb">Removed</td><td>Not measurable in scope</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 04</p>
+<aside>Say this explicitly. The biggest correction: Review 1 said SHAP is too slow. That's true of Kernel SHAP, not TreeSHAP, and a reviewer would have caught it. We now measure both.</aside>
+</section>

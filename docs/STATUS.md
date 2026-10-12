@@ -12,7 +12,7 @@ Last updated: 2026-10-12 by Member 3
 
 | Checkpoint | Needs | Status |
 |---|---|---|
-| **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | 🟡 Pipeline ✅ (on fake models) · v0 models ⬜ · dashboard ✅ (live on real pipeline output, PR open) |
+| **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | 🟡 Pipeline ✅ (on fake models) · v0 models ⬜ · dashboard ✅ (live on real pipeline output) |
 | **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | ⬜ |
 | **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | ⬜ |
 | Code freeze | | ⬜ |
@@ -24,6 +24,7 @@ Last updated: 2026-10-12 by Member 3
 | M2.4, M2.5, M2.8 final numbers, M2.10 placeholders | v0/final models + `test.parquet` (M1.3) | Member 1 |
 | M2.6 "done when" (run with dashboard open) | Dashboard PR `dashboard/live-app` to be merged (tested locally with the pipeline) | Member 2 (review) |
 | M3.5 results tab | `reports/*.json` (M1.6–M1.8) | Member 1 |
+| M3.6/M3.7 result numbers, M3.9 video | Real models + `reports/*.json`; M1.9 paper sections; Drive link for README | Member 1 |
 
 ---
 
@@ -61,14 +62,14 @@ Last updated: 2026-10-12 by Member 3
 | Task | Status | Notes |
 |---|---|---|
 | M3.1 `dashboard/fake_events.py` | ✅ | Skipped: not needed, built against a real `events.db` from `make_fake_models.py` + `pipeline.run` |
-| M3.2 `dashboard/app.py` layout | ✅ | State badge, metrics, flows/z-score chart with ELEVATED shading, last-50 alert table; 1 s refresh; survives DB recreate |
-| M3.3 Explanation panel | ✅ | Pick by alert ID (0 = latest); SHAP bar chart + sentences + low-confidence tag. "Pause live updates" toggle for the demo |
+| M3.2 `dashboard/app.py` layout | ✅ | Black/grey theme (`.streamlit/config.toml`), status strip, 5 KPI tiles, flows + z-score panels with thresholds and ELEVATED bands, alerts-by-type, last-50 table; 1 s refresh; survives DB recreate |
+| M3.3 Explanation panel | ✅ | Alert card + SHAP bars + parsed reasons + low-confidence tag; neon Prev/Next/Latest stepping; Pause/Resume button for presenting |
 | M3.4 Stats sidebar | ✅ | Detect/explain p50/p95, % scored/explained per state, `run_meta` when the run ends |
-| M3.5 Results tab | 🟡 | Tab built; shows `pipeline_latency.json` properly. M1 reports render generically (tables/JSON) until their formats are known. Waiting on M1.6–M1.8 |
-| M3.6 Paper | ⬜ | Member 2's section is in `paper/` |
-| M3.7 Review 2 slides | ⬜ | |
-| M3.8 README | 🟡 | Setup, pipeline and dashboard sections written; data link + training sections need Member 1 |
-| M3.9 Backup demo video | ⬜ | |
+| M3.5 Results tab | 🟡 | Built and tested with sample JSON: SHAP speed-up, per-model metrics, per-class F1, holdout, pipeline latency. Tolerant parsing; confirm against Member 1's real reports |
+| M3.6 Paper | 🟡 | Draft assembled: `paper/sections/*` + `python paper/build.py` → `paper/paper.md` (merges M2's section, fills numbers from `reports/`). Open: Review 1 lit review, M1 sections (drafts in place), author names |
+| M3.7 Review 2 slides | 🟡 | 13-slide deck (source in `paper/slides/`, hosted deck shared by Member 3). Result slides have `[__]` placeholders until reports land |
+| M3.8 README | 🟡 | Full rewrite: overview, quick start per OS, dashboard guide, evaluation, troubleshooting. Only the Drive data link is left (Member 1) |
+| M3.9 Backup demo video | ⏳ | Run-of-show + recording steps in `paper/demo_script.md`; record once real models are in |
 
 ## Shared
 

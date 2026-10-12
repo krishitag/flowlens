@@ -1,0 +1,22 @@
+<section id="problem" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:72px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">The problem</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15;width:1500px">An alert arrives as a label, not a reason</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:48px">
+<h3 style="font-size:44px;font-weight:600">Visibility</h3>
+<p style="font-size:32px;color:#c3c2b7;line-height:1.4">Traffic dashboards show how much is flowing, but not whether it is hostile.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:48px">
+<h3 style="font-size:44px;font-weight:600">Security</h3>
+<p style="font-size:32px;color:#c3c2b7;line-height:1.4">ML detectors raise alerts as class labels, with a score at best.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#1a1a19;border:1px solid #e5534b;border-radius:16px;padding:48px">
+<h3 style="font-size:44px;font-weight:600">The gap</h3>
+<p style="font-size:32px;color:#c3c2b7;line-height:1.4">Without a reason, the analyst can neither triage the alert quickly nor trust the detector.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 02</p>
+<aside>Monitoring tools split visibility from security. When an ML detector fires, the analyst gets "DoS, 0.97" and nothing else. Published XAI-for-IDS work adds SHAP, but offline and mostly with Kernel SHAP, which is too slow for live traffic.</aside>
+</section>

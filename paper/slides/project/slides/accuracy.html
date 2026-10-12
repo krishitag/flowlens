@@ -1,0 +1,31 @@
+<section id="accuracy" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Detection</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15">Known attacks and unseen ones</h2>
+</div>
+<div style="display:flex;gap:48px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<h3 style="font-size:32px;font-weight:600;color:#c3c2b7">Per-class F1 · test split</h3>
+<table style="font-size:26px;color:#c3c2b7;font-family:'IBM Plex Sans', Arial, sans-serif">
+<tr style="background:#1a1a19"><th style="width:40%;color:#8f8d86">Class</th><th style="width:30%;color:#ededeb;text-align:right">LightGBM</th><th style="width:30%;color:#8f8d86;text-align:right">RF</th></tr>
+<tr><td>BENIGN</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+<tr><td>DoS</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+<tr><td>DDoS</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+<tr><td>PortScan</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+<tr><td>BruteForce</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+<tr><td>WebAttack</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+<tr><td>Bot</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+<tr style="background:#1a1a19"><td>Macro F1</td><td style="text-align:right;color:#ededeb">[__]</td><td style="text-align:right">[__]</td></tr>
+</table>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:48px">
+<h3 style="font-size:32px;font-weight:600;color:#c3c2b7">Leave-one-attack-out · [Bot] never seen in training</h3>
+<div style="display:flex;justify-content:space-between"><p style="font-size:32px;color:#c3c2b7">LightGBM alone</p><p style="font-size:44px;font-weight:600">[__]%</p></div>
+<div style="display:flex;justify-content:space-between"><p style="font-size:32px;color:#c3c2b7">Isolation Forest alone</p><p style="font-size:44px;font-weight:600">[__]%</p></div>
+<div style="display:flex;justify-content:space-between;border-top:1px solid #2e2e2c;padding:20px 0 0 0"><p style="font-size:32px;color:#ededeb">Either (our flag rule)</p><p style="font-size:44px;font-weight:600;color:#b4f23c">[__]%</p></div>
+<p style="font-size:24px;color:#8f8d86">Recall on the held-out class. Benign FPR (LightGBM): [__]%</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 10</p>
+<aside>Fill from reports/results.json and reports/holdout.json. Left: LightGBM against the Random Forest baseline. Right: why we run two models. A classifier can't name an attack it never saw; the Isolation Forest, trained on benign traffic only, is there to catch it.</aside>
+</section>
