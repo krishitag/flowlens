@@ -1,0 +1,15 @@
+# Dashboard theme (Member 3). Streamlit reads this when run from the repo root:
+#   streamlit run dashboard/app.py
+[theme]
+base = "dark"
+primaryColor = "#c3c2b7"
+backgroundColor = "#0d0d0d"
+secondaryBackgroundColor = "#1a1a19"
+textColor = "#ededeb"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
