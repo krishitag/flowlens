@@ -67,7 +67,7 @@ Last updated: 2026-10-12 by Member 3
 | M3.5 Results tab | 🟡 | Tab built; shows `pipeline_latency.json` properly. M1 reports render generically (tables/JSON) until their formats are known. Waiting on M1.6–M1.8 |
 | M3.6 Paper | ⬜ | Member 2's section is in `paper/` |
 | M3.7 Review 2 slides | ⬜ | |
-| M3.8 README | 🟡 | Setup + pipeline sections written; data link, dashboard, training sections to fill |
+| M3.8 README | 🟡 | Setup, pipeline and dashboard sections written; data link + training sections need Member 1 |
 | M3.9 Backup demo video | ⬜ | |
 
 ## Shared
