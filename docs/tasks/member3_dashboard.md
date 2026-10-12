@@ -51,6 +51,26 @@ Branch prefix: `dashboard/` (for example `dashboard/alert-table`). Commit messag
 
 Classes: `BENIGN`, `DoS`, `DDoS`, `PortScan`, `BruteForce`, `WebAttack`, `Bot`.
 
+## Current status: you can use a real events.db now
+
+Member 2's pipeline is finished, so you don't have to wait for it, and you may not need `fake_events.py` at all. To get a real `data/events.db` in the exact schema:
+```
+pip install -r requirements.txt        # macOS: also brew install libomp
+python tests/make_fake_models.py       # fake models + test data (until Member 1's real ones arrive; don't commit them)
+python -m pipeline.run --scenario scenarios/demo.json --speed 1
+```
+Run your dashboard at the same time. `--speed 1` takes about 105 s and writes one window per second, so it's a true live test. Every run deletes and recreates the DB, so the dashboard must handle the file disappearing briefly.
+
+**What the values look like in practice:**
+- **`explanation`:** usually up to 3 sentences separated by **newlines** (`\n`), one per feature, e.g. `Flow Packets/s = 4,812 (above 99.9% of normal flows)`. If no feature stands out, it's a single fallback sentence instead.
+- **`top_features[].contribution`:** positive means it pushed the flow toward "anomalous", for both models, so you can plot them on the same bar chart. `top_features` can hold fewer than 3 entries.
+- **`if_score`:** NULL for alerts from NORMAL windows (IsolationForest only runs when ELEVATED). Lower means more anomalous.
+- **`pred_label`:** always LightGBM's prediction. For `source = 'iforest'` it's often `BENIGN`, which means "anomalous, but not a known attack".
+- **"Low confidence" tag:** show it when `if_score` is not NULL and `source` is `'lgbm'` or `'iforest'`. Both models ran, but only one flagged the flow.
+- **`run_meta` keys** (written at the end of a run): `scenario`, `speed`, `total_flows`, `total_alerts`, `detect_ms_p50`, `detect_ms_p95`, `explain_ms_p50`, `explain_ms_p95`.
+- **State timeline in `demo.json`:** ELEVATED from ts≈32–54 (DoS) and ts≈72–89 (PortScan).
+- **Paper text from Member 2:** already in `paper/pipeline_section.md`. Its result numbers are `[placeholders]` until the real models are in.
+
 ---
 
 ## Tasks

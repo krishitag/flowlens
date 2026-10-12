@@ -21,6 +21,23 @@ Branch prefix: `ml/` (for example `ml/prepare-data`). Commit messages start with
 
 If you change a file name, column name or JSON key, their code breaks. These are **frozen contracts** (PLAN.md Section 4).
 
+## Current status: the pipeline is waiting on your files
+
+Member 2's pipeline is finished and has been tested on fake models. As soon as your v0 files are in `models/` and `data/processed/`, it runs on them. Here is exactly how it uses them:
+
+- **`lgbm.joblib`** must be an `LGBMClassifier` (the sklearn API), because the pipeline calls `predict_proba()` and `shap.TreeExplainer` on it. Train on integer class ids 0–6 that match `labels.json`.
+- **`iforest.joblib`** must be a sklearn `IsolationForest`. The flag rule is **`iforest.score_samples(X) < threshold`**, so set `iforest_threshold.json` from **`score_samples`**, not `decision_function`. They differ by an offset.
+- **Feature columns:** the pipeline selects `test.parquet[features.json]` by name, so the names in `features.json` must match the parquet's column names exactly.
+- **`baselines.json`** must have exactly 102 numbers per feature.
+- **Expected format:** [tests/make_fake_models.py](../../tests/make_fake_models.py) writes every file in the correct format with synthetic data. Copy its structure.
+- **Testing your v0 files** after you push them:
+  ```
+  python -m pipeline.explainer                                     # correlation should be strongly positive
+  python -m pipeline.run --scenario scenarios/demo.json --speed 0
+  ```
+  Also tell Member 2 when they're in.
+- **Setup:** `pip install -r requirements.txt`. On macOS, also run `brew install libomp`.
+
 ## Files you must produce (contract 4.1)
 
 | Path | What's in it |

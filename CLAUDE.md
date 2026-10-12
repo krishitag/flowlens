@@ -24,3 +24,10 @@ Never rename columns, tables, files or JSON keys from these contracts. If a task
 - Never commit anything under `data/`.
 - Keep code simple and readable; this is a 2-day university project, not production.
 - After implementing a task, tell the user the exact command to verify its "done when" condition from PLAN.md.
+- `tests/make_fake_models.py` writes fake `models/*` and `test.parquet` for development. Never commit them, and never run it once real models are in `models/`.
+
+## Commands
+- Setup: `pip install -r requirements.txt` (macOS: `brew install libomp` for LightGBM)
+- Tests: `pytest tests/ -q`
+- Pipeline: `python -m pipeline.run --scenario scenarios/demo.json --speed 1`
+- Dashboard: `streamlit run dashboard/app.py`

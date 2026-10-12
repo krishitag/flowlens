@@ -14,6 +14,27 @@ Source of truth: [docs/PLAN.md](../PLAN.md). If this file and the plan disagree,
 
 Branch prefix: `pipeline/` (for example `pipeline/explainer`). Commit messages start with `[pipeline]`.
 
+## Current status
+
+| Task | State |
+|---|---|
+| M2.1 store, M2.2 replayer, M2.3 monitor, M2.7 scenarios, M2.9 tests | ✅ Done (`pytest tests/ -q`: 18 pass) |
+| M2.4 detector, M2.5 explainer | Code done. Needs a rerun on Member 1's v0 models |
+| M2.6 run.py | Code done; `--speed 1` keeps up with real time. Needs a run with Member 3's dashboard open (Checkpoint B) |
+| M2.8 latency report | Script done (`python -m pipeline.latency_report --scenario scenarios/stress.json`). Rerun on the real models |
+| M2.10 paper section | Drafted in `paper/pipeline_section.md`. Fill in the `[placeholders]` with the real numbers |
+
+**Once the real models land:**
+1. `python -m pipeline.explainer` (the IForest sign correlation should be strongly positive)
+2. `python -m pipeline.latency_report --scenario scenarios/stress.json`
+3. `python -m pipeline.run --scenario scenarios/slowscan.json --speed 0`
+4. Update the placeholders and slow-scan figures in the paper section.
+
+**Differences from PLAN.md:**
+- The exit rule is z < 2 for 5 windows (not z < 1 for 10).
+- Tier 1 uses flow rate only.
+- The replayer draws each window's flow count from a Poisson distribution.
+
 ## How your pieces fit
 
 ```
@@ -69,7 +90,7 @@ scenario.json ─▶ replayer ─▶ monitor (Tier 1) ─▶ detector (Tier 2) �
 - For each 1-second window, compute flows/s and packets/s.
 - Keep an EWMA mean and variance with alpha = 0.1, and compute a z-score.
 - **NORMAL → ELEVATED:** z > 3 for **3 consecutive** windows.
-- **ELEVATED → NORMAL:** z < 1 for **10 consecutive** windows.
+- **ELEVATED → NORMAL:** z < 2 for **5 consecutive** windows. (The plan originally said z < 1 for 10, which rarely recovered with realistic traffic.)
 - Write it as a pure function or class so it's easy to unit test.
 - **Done when:** the state flips to ELEVATED during the DoS segment.
 
@@ -112,7 +133,7 @@ scenario.json ─▶ replayer ─▶ monitor (Tier 1) ─▶ detector (Tier 2) �
 - **Done when:** the numbers are ready for the paper.
 
 ### M2.9: Minimal tests
-- `tests/test_monitor.py`: state transitions (NORMAL → ELEVATED after 3 high windows, back after 10 low ones).
+- `tests/test_monitor.py`: state transitions (NORMAL → ELEVATED after 3 high windows, back after 5 low ones).
 - `tests/test_explainer.py`: the percentile lookup and sentence formatting.
 - **Done when:** `pytest` is green.
 

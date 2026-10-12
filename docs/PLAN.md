@@ -58,7 +58,7 @@ Low-and-slow attacks (e.g. a slow port scan) may never push aggregate traffic hi
                                                    Streamlit dashboard
 ```
 
-- **Tier 1:** every 1-second window, compute flows/s and packets/s. EWMA mean and variance (alpha = 0.1). If z-score > 3 for 3 consecutive windows → ELEVATED. Back to NORMAL after 10 consecutive windows with z < 1.
+- **Tier 1:** every 1-second window, compute flows/s and packets/s. EWMA mean and variance (alpha = 0.1). If z-score > 3 for 3 consecutive windows → ELEVATED. Back to NORMAL after 5 consecutive windows with z < 2. (Changed from "10 windows with z < 1", which often never recovered under realistic Poisson traffic; simulation in `paper/pipeline_section.md`.) The baseline is frozen while ELEVATED.
 - **Tier 2:** NORMAL → score a random 10% of flows with LightGBM. ELEVATED → score every flow with LightGBM **and** Isolation Forest.
 - **Flag rule:** flagged if LightGBM predicts non-BENIGN with prob ≥ 0.5, **or** Isolation Forest score is past its threshold. Record which (`lgbm`, `iforest`, `both`). `both` disagreeing with each other = show "low confidence" on the dashboard.
 - **Explainer:** TreeSHAP on flagged flows only. Use LightGBM contributions for the predicted class; if only IForest flagged it, use TreeSHAP on IForest. Take top 3 features pushing toward "anomalous", and turn each into a sentence using benign percentiles, e.g. `Flow Packets/s = 4,812 (above 99.9% of normal flows)`.
@@ -89,6 +89,7 @@ shap
 joblib
 streamlit
 plotly
+pytest
 ```
 
 **Dataset:** CIC-IDS2017, the **MachineLearningCSV / MachineLearningCVE** CSVs (one CSV per capture day, ~78 flow features + `Label`). Get it from the UNB CIC site (form before download) or a Kaggle mirror. **Member 1 starts this download in the first 10 minutes.** Raw data is never committed.
