@@ -4,7 +4,7 @@ The one place to track progress. **Update your own rows whenever you push a task
 
 Legend: ✅ done · 🟡 in progress / partly done · ⏳ waiting on someone · ⬜ not started
 
-Last updated: 2026-10-12 by Member 3
+Last updated: 2026-10-13 by Member 2
 
 ---
 
@@ -13,7 +13,7 @@ Last updated: 2026-10-12 by Member 3
 | Checkpoint | Needs | Status |
 |---|---|---|
 | **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | 🟡 Pipeline ✅ (on fake models) · v0 models ⬜ · dashboard ✅ (live on real pipeline output) |
-| **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | ⬜ |
+| **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | 🟡 End-to-end with live dashboard works on fake models · v0 models ⬜ |
 | **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | ⬜ |
 | Code freeze | | ⬜ |
 
@@ -22,7 +22,6 @@ Last updated: 2026-10-12 by Member 3
 | Blocked task | Waiting on | Owner of blocker |
 |---|---|---|
 | M2.4, M2.5, M2.8 final numbers, M2.10 placeholders | v0/final models + `test.parquet` (M1.3) | Member 1 |
-| M2.6 "done when" (run with dashboard open) | Dashboard PR `dashboard/live-app` to be merged (tested locally with the pipeline) | Member 2 (review) |
 | M3.5 results tab | `reports/*.json` (M1.6–M1.8) | Member 1 |
 | M3.6/M3.7 result numbers, M3.9 video | Real models + `reports/*.json`; M1.9 paper sections; Drive link for README | Member 1 |
 
@@ -51,7 +50,7 @@ Last updated: 2026-10-12 by Member 3
 | M2.3 `pipeline/monitor.py` | ✅ | Exit rule changed to z < 2 for 5 windows (see PLAN.md §2) |
 | M2.4 `pipeline/detector.py` | ⏳ | Works on fake models; rerun on v0 |
 | M2.5 `pipeline/explainer.py` | ⏳ | Works on fake models; check sentences + IForest sign on v0 |
-| M2.6 `pipeline/run.py` | ⏳ | `--speed 1` keeps real time; needs dashboard run |
+| M2.6 `pipeline/run.py` | ✅ | Ran live (`--speed 1`) with the dashboard open: ELEVATED ≈32–54 s and 72–89 s, RUN COMPLETE at 104 s (fake models) |
 | M2.7 Scenarios | ✅ | demo, stress, slowscan |
 | M2.8 Latency report | ⏳ | Script done; rerun on real models |
 | M2.9 Tests | ✅ | 18 passing |
