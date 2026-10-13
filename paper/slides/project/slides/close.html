@@ -1,0 +1,17 @@
+<section id="close" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Conclusion</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15;width:1500px">Explanations at stream speed</h2>
+</div>
+<div style="display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;gap:24px;align-items:start"><x-shape kind="rect" style="width:16px;height:16px;background:#b4f23c"></x-shape><p style="font-size:36px;color:#c3c2b7;line-height:1.35;width:1500px">"SHAP is too slow" holds for Kernel SHAP, not for TreeSHAP on tree models</p></div>
+<div style="display:flex;gap:24px;align-items:start"><x-shape kind="rect" style="width:16px;height:16px;background:#b4f23c"></x-shape><p style="font-size:36px;color:#c3c2b7;line-height:1.35;width:1500px">Two tiers keep full scoring and explanation for when traffic is abnormal</p></div>
+<div style="display:flex;gap:24px;align-items:start"><x-shape kind="rect" style="width:16px;height:16px;background:#b4f23c"></x-shape><p style="font-size:36px;color:#c3c2b7;line-height:1.35;width:1500px">LightGBM names known attacks; Isolation Forest flags unseen ones</p></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:end">
+<h1 style="font-size:120px;font-weight:700;letter-spacing:-3px;line-height:1">Questions?</h1>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#8f8d86">github.com/krishitag/flowlens</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 13</p>
+<aside>Recap the three points, then take questions. Likely questions: why not deep learning (tree models are fast, accurate on tabular flow features, and exactly explainable with TreeSHAP); how the IForest threshold was chosen (about 1% FPR on benign validation flows); what happens under sustained legitimate load (the baseline is frozen while ELEVATED, so it stays ELEVATED until reset; listed as a limitation in the paper).</aside>
+</section>

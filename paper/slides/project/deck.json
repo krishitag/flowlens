@@ -1,0 +1,19 @@
+{
+  "v": 4,
+  "createdOnFiles": {"v": 1, "at": "2026-10-12T23:40:00+05:30"},
+  "lists": "css",
+  "title": "FlowLens Review 2",
+  "order": ["cover", "problem", "claim", "changes", "architecture", "tiers", "explain", "demo", "headline", "accuracy", "latency", "limits", "close"],
+  "sections": {
+    "intro": {"description": "The problem and our claim", "start": "cover"},
+    "changed": {"description": "What changed since Review 1", "start": "changes"},
+    "system": {"description": "How FlowLens works", "start": "architecture"},
+    "demo": {"description": "Live demo", "start": "demo"},
+    "results": {"description": "Measured results", "start": "headline"},
+    "wrap": {"description": "Limitations and conclusion", "start": "limits"}
+  },
+  "faces": {
+    "ibm-plex-sans": {"family": "IBM Plex Sans", "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"},
+    "jetbrains-mono": {"family": "JetBrains Mono", "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"}
+  }
+}

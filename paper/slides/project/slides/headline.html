@@ -1,0 +1,23 @@
+<section id="headline" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Headline result · explanation latency per flow</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15">TreeSHAP is fast enough for live traffic</h2>
+</div>
+<div style="display:flex;gap:32px;align-items:end">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:32px;color:#8f8d86">TreeSHAP, median</p>
+<p style="font-size:120px;font-weight:700;letter-spacing:-3px;line-height:1">[__] ms</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:32px;color:#8f8d86">Kernel SHAP, median</p>
+<p style="font-size:120px;font-weight:700;letter-spacing:-3px;line-height:1;color:#8f8d86">[__] ms</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;border-left:2px solid #b4f23c;padding:0 0 0 40px">
+<p style="font-size:32px;color:#8f8d86">Speed-up</p>
+<p style="font-size:120px;font-weight:700;letter-spacing:-3px;line-height:1;color:#b4f23c">[__]×</p>
+</div>
+</div>
+<p style="font-size:24px;color:#8f8d86;line-height:1.4;width:1600px">Same LightGBM model. TreeSHAP on 200 flagged test flows; Kernel SHAP on 50 flows with 100 benign background samples. Source: reports/explain_benchmark.json</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 09</p>
+<aside>This is the core claim, measured. Fill the three numbers from reports/explain_benchmark.json (the dashboard's Results tab shows them). Point out that one second of ELEVATED traffic can hold hundreds of flows: at Kernel SHAP speed, explaining them would take far longer than the window.</aside>
+</section>

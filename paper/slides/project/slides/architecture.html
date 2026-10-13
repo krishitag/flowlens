@@ -1,0 +1,40 @@
+<section id="architecture" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:72px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Architecture</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.15">One-second windows, five stages</h2>
+</div>
+<div style="display:flex;align-items:center;gap:16px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:32px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#8f8d86">01</p>
+<h3 style="font-size:32px;font-weight:600">Replayer</h3>
+<p style="font-size:24px;color:#c3c2b7;line-height:1.4">Test flows streamed per a scenario file</p>
+</div>
+<x-shape kind="arrow-right" style="width:44px;height:22px;background:#8f8d86"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:32px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#8f8d86">02</p>
+<h3 style="font-size:32px;font-weight:600">Tier 1</h3>
+<p style="font-size:24px;color:#c3c2b7;line-height:1.4">EWMA monitor: NORMAL or ELEVATED</p>
+</div>
+<x-shape kind="arrow-right" style="width:44px;height:22px;background:#8f8d86"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:32px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#8f8d86">03</p>
+<h3 style="font-size:32px;font-weight:600">Tier 2</h3>
+<p style="font-size:24px;color:#c3c2b7;line-height:1.4">LightGBM and Isolation Forest</p>
+</div>
+<x-shape kind="arrow-right" style="width:44px;height:22px;background:#8f8d86"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #b4f23c;border-radius:16px;padding:32px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#8f8d86">04</p>
+<h3 style="font-size:32px;font-weight:600">Explainer</h3>
+<p style="font-size:24px;color:#c3c2b7;line-height:1.4">TreeSHAP on flagged flows only</p>
+</div>
+<x-shape kind="arrow-right" style="width:44px;height:22px;background:#8f8d86"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:32px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#8f8d86">05</p>
+<h3 style="font-size:32px;font-weight:600">Dashboard</h3>
+<p style="font-size:24px;color:#c3c2b7;line-height:1.4">Reads SQLite live, once a second</p>
+</div>
+</div>
+<p style="font-size:32px;color:#c3c2b7;line-height:1.4;width:1500px">The pipeline writes windows and alerts to SQLite in WAL mode, so the dashboard reads while it writes. Dataset: CIC-IDS2017, grouped into BENIGN plus six attack classes.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 05</p>
+<aside>Walk left to right. The replayer turns labelled test flows into a live stream, Poisson-distributed per window. Tier 1 decides how much work Tier 2 does. Only flagged flows reach the explainer. Everything lands in SQLite, which the dashboard polls every second.</aside>
+</section>
