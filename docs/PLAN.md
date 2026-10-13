@@ -246,8 +246,8 @@ CREATE TABLE IF NOT EXISTS run_meta (key TEXT PRIMARY KEY, value TEXT);
 
 | # | Task | Output | Done when |
 |---|---|---|---|
-| M3.1 | `dashboard/fake_events.py`: writes fake windows + alerts into `data/events.db` using the exact schema, so the dashboard is built **without waiting** for anyone | fake DB | Dashboard has data from hour 1 |
-| M3.2 | `dashboard/app.py` layout: **Top row:** state badge (green NORMAL / red ELEVATED), flows/s, packets/s, alerts in last 60s. **Main chart:** flows/s over time with ELEVATED periods shaded, z-score on secondary axis. **Alert table:** last 50 alerts — time, dst port, predicted type, confidence, source, ground truth. | page | Refreshes every 1s via `st.fragment(run_every=1)` |
+| M3.1 | `dashboard/fake_events.py`: writes fake windows + alerts into `data/events.db` using the exact schema, so the dashboard is built **without waiting** for anyone. (Skipped: the real pipeline + `tests/make_fake_models.py` produced a real `events.db` first.) | fake DB | Dashboard has data from hour 1 |
+| M3.2 | `dashboard/app.py` layout: **Top row:** state badge (green NORMAL / red ELEVATED), flows/s, packets/s, alerts in last 60s. **Main chart:** flows/s over time with ELEVATED periods shaded, z-score in a second panel underneath on the same time axis (originally a secondary y-axis; changed for readability). **Alert table:** last 50 alerts — time, dst port, predicted type, confidence, source, ground truth. | page | Refreshes every 1s via `st.fragment(run_every=1)` |
 | M3.3 | Explanation panel: select an alert → horizontal bar chart of top features' SHAP contributions + the explanation sentences + "low confidence" tag if LightGBM and IForest disagree | panel | Reads `top_features` JSON |
 | M3.4 | Stats sidebar: detect/explain latency p50/p95 from alerts table, % flows scored and explained per state | sidebar | Live numbers |
 | M3.5 | Results tab: loads `reports/*.json` and figures → shows F1 table, holdout table, TreeSHAP vs Kernel SHAP chart | second tab | Works once Member 1 pushes reports |
@@ -287,7 +287,7 @@ If you're behind at Checkpoint B, cut in this order: RF baseline → second hold
 - **Repo:** one repo, `main` is always runnable.
 - **Branches:** `ml/<task>`, `pipeline/<task>`, `dashboard/<task>` — e.g. `ml/prepare-data`, `pipeline/explainer`.
 - **Issues:** create one issue per task ID above (M1.1 … M3.9), assign to the owner, label `ml` / `pipeline` / `dashboard` / `paper`. Close via PR (`Closes #12`).
-- **PRs:** small and often — at least one merge per member before each checkpoint. Owner can self-merge PRs that only touch their own folder. PRs touching shared files (`contracts/`, `requirements.txt`, `CLAUDE.md`, `docs/`) need the other two to approve.
+- **PRs:** small and often — at least one merge per member before each checkpoint. `main` is protected: every PR needs **1 approval** from another member before it can merge (no self-merging), and direct pushes and force-pushes to `main` are blocked. PRs touching shared files (`contracts/`, `requirements.txt`, `CLAUDE.md`, `docs/`) should be seen by both other members. Squash-merge, and keep `Co-authored-by: Claude` lines out of the final commit message.
 - **.gitignore:** `data/`, `*.db`, `__pycache__/`, `.venv/`, large model files (> 50 MB).
 - **Large files:** never commit raw CSVs or parquet. Share `data/processed/` via Google Drive link in README.
 - **Commit messages:** `[ml] add label grouping`, `[pipeline] tier1 ewma monitor`, `[dash] alert table`.

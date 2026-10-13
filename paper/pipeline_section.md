@@ -80,5 +80,3 @@ On the final models, detection latency was [p50_detect_ms] ms at the median and 
 **Frozen baseline.** Because the baseline is not updated while ELEVATED, the monitor assumes that every period of high traffic eventually ends. A legitimate, lasting increase in traffic, such as a new service or a busy period, would keep the system ELEVATED indefinitely. Every flow would then be scored and explained, removing the savings from tiering, until an operator reset the baseline.
 
 **Volume-only monitoring.** The monitor uses flow counts only. Attacks that change what the traffic looks like without changing how much there is are left entirely to the 10% sample in NORMAL state.
-
-**Replayed traffic.** The stream is built by resampling labelled flow records, not by capturing live packets. Latency figures therefore exclude packet capture and flow feature extraction, which a deployed system would also need.

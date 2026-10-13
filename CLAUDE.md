@@ -34,10 +34,17 @@ Never rename columns, tables, files or JSON keys from these contracts. If a task
 5. Tell the user you updated STATUS.md, so it goes into the same commit as the work.
 
 Ask the user which member they are if it isn't clear. `docs/STATUS.md` is the one shared file every member may edit without team approval, and only for status updates.
+
+## Git workflow
+- `main` is protected. Work on a branch (`ml/<task>`, `pipeline/<task>`, `dashboard/<task>`), push it and open a PR. A PR needs 1 approval from another member before it can merge.
+- Never push to `main` directly, and never force-push.
+- Don't add `Co-authored-by: Claude` trailers or "Generated with Claude Code" lines to commits or PRs.
+- Stage files by name. Never `git add .`, because the fake `models/*` files aren't gitignored.
 - `tests/make_fake_models.py` writes fake `models/*` and `test.parquet` for development. Never commit them, and never run it once real models are in `models/`.
 
 ## Commands
 - Setup: `pip install -r requirements.txt` (macOS: `brew install libomp` for LightGBM)
 - Tests: `pytest tests/ -q`
 - Pipeline: `python -m pipeline.run --scenario scenarios/demo.json --speed 1`
-- Dashboard: `streamlit run dashboard/app.py`
+- Dashboard: `streamlit run dashboard/app.py` (from the repo root, so it picks up `.streamlit/config.toml`)
+- Paper: `python paper/build.py` rebuilds `paper/paper.md` from `paper/sections/*` + `paper/pipeline_section.md`

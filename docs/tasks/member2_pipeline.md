@@ -12,7 +12,7 @@ Source of truth: [docs/PLAN.md](../PLAN.md). If this file and the plan disagree,
 |---|---|
 | `pipeline/`, `scenarios/`, `tests/`, `reports/pipeline_latency.json` | `ml/`, `models/`, `dashboard/`, `paper/`, `README.md`, and the shared files (`contracts/`, `requirements.txt`, `CLAUDE.md`, `docs/`) unless all 3 of you agree |
 
-Branch prefix: `pipeline/` (for example `pipeline/explainer`). Commit messages start with `[pipeline]`.
+Branch prefix: `pipeline/` (for example `pipeline/explainer`). Commit messages start with `[pipeline]`. `main` is protected: push your branch and open a PR, which needs 1 approval before merging.
 
 ## Current status
 
@@ -23,6 +23,7 @@ Per-task status is in [docs/STATUS.md](../STATUS.md).
 2. `python -m pipeline.latency_report --scenario scenarios/stress.json`
 3. `python -m pipeline.run --scenario scenarios/slowscan.json --speed 0`
 4. Update the placeholders and slow-scan figures in the paper section.
+5. Rerun the live demo with the dashboard (`--speed 1`) to check the alerts look sensible on the real models.
 
 **Differences from PLAN.md:**
 - The exit rule is z < 2 for 5 windows (not z < 1 for 10).

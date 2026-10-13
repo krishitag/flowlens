@@ -12,7 +12,7 @@ Source of truth: [docs/PLAN.md](../PLAN.md). If this file and the plan disagree,
 |---|---|
 | `dashboard/`, `paper/`, `README.md` | `ml/`, `models/`, `pipeline/`, `scenarios/`, `tests/`, `reports/`, and the shared files (`contracts/`, `requirements.txt`, `CLAUDE.md`, `docs/`) unless all 3 of you agree |
 
-Branch prefix: `dashboard/` (for example `dashboard/alert-table`). Commit messages start with `[dash]`.
+Branch prefix: `dashboard/` (for example `dashboard/alert-table`). Commit messages start with `[dash]`. `main` is protected: push your branch and open a PR, which needs 1 approval before merging.
 
 ## Where your data comes from
 
@@ -51,9 +51,17 @@ Branch prefix: `dashboard/` (for example `dashboard/alert-table`). Commit messag
 
 Classes: `BENIGN`, `DoS`, `DDoS`, `PortScan`, `BruteForce`, `WebAttack`, `Bot`.
 
-## Current status: you can use a real events.db now
+## Current status
 
-Member 2's pipeline is finished, so you don't have to wait for it, and you may not need `fake_events.py` at all. To get a real `data/events.db` in the exact schema:
+The dashboard (M3.2–M3.4) is merged to `main` (PR #1) and has been run live with the pipeline. Per-task status is in [docs/STATUS.md](../STATUS.md). What's left: the Results tab against Member 1's real reports, the paper, the slides, the README Drive link and the backup video.
+
+**Feedback from the live run (Member 2):**
+- **Old run summary in the sidebar:** at the start of a new run, the sidebar's "Run summary" still showed the previous run's totals while the run was LIVE. It disappears once the run ends. It's probably an old Streamlit element that the sidebar refresh doesn't clear.
+- **The duplicated limitations text:** "low-and-slow" and "replayed traffic" appear both in `paper/pipeline_section.md` and in `paper/sections/08_limitations.md`. Member 2 has removed the replayed-traffic paragraph from their section; keep yours.
+- **Before presenting:** click "Don't show again" on Streamlit's "Help agents write better apps" pop-up. It covers the KPI tiles.
+- **Don't run `paper/build.py` and commit the result yet:** until real reports exist, it would fill in numbers from whatever `reports/*.json` is on your machine, which may be fake.
+
+**To get a fresh `data/events.db` to test with:**
 ```
 pip install -r requirements.txt        # macOS: also brew install libomp
 python tests/make_fake_models.py       # fake models + test data (until Member 1's real ones arrive; don't commit them)
@@ -82,7 +90,7 @@ Run your dashboard at the same time. `--speed 1` takes about 105 s and writes on
 
 ### M3.2: `dashboard/app.py` layout
 - **Top row:** a state badge (green NORMAL / red ELEVATED), flows/s, packets/s, and alerts in the last 60s.
-- **Main chart:** flows/s over time with ELEVATED periods shaded, and z-score on a secondary axis (Plotly).
+- **Main chart:** flows/s over time with ELEVATED periods shaded, and z-score in a second panel underneath on the same time axis (Plotly).
 - **Alert table:** the last 50 alerts, with time, dst port, predicted type, confidence, source and ground truth.
 - Live refresh with `st.fragment(run_every=1)`.
 - **Done when:** it refreshes every second. Run it with `streamlit run dashboard/app.py`.
@@ -148,6 +156,6 @@ If you're behind, cut the Results tab and put the figures in the slides instead.
 - Never commit `data/events.db`.
 
 ## Starter prompt for Claude Code
-> I'm Member 3. Read docs/PLAN.md and CLAUDE.md. Implement task M3.1 in dashboard/fake_events.py following the schema in contracts/schema.sql (PLAN.md 4.3). Don't modify files outside dashboard/.
+> I'm Member 3. Read docs/PLAN.md, CLAUDE.md and docs/STATUS.md. Implement task M3.6 in paper/ following PLAN.md Section 5. Don't modify files outside dashboard/, paper/ and README.md.
 
 Do one task ID per prompt, run what it writes, check the "done when" condition, then commit.

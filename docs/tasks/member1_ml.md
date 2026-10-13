@@ -12,7 +12,9 @@ Source of truth: [docs/PLAN.md](../PLAN.md). If this file and the plan disagree,
 |---|---|
 | `ml/`, `models/`, `reports/results.json`, `reports/holdout.json`, `reports/explain_benchmark.json`, `reports/figures/` | `pipeline/`, `scenarios/`, `tests/`, `dashboard/`, `paper/`, `README.md`, and the shared files (`contracts/`, `requirements.txt`, `CLAUDE.md`, `docs/`) unless all 3 of you agree |
 
-Branch prefix: `ml/` (for example `ml/prepare-data`). Commit messages start with `[ml]`.
+Branch prefix: `ml/` (for example `ml/prepare-data`). Commit messages start with `[ml]`. `main` is protected: push your branch and open a PR, which needs 1 approval before merging.
+
+**`models/` artifacts:** commit the real ones (except `rf.joblib` if it's over 50 MB). Anyone who ran `tests/make_fake_models.py` has fake files in `models/`. Tell the team when the real ones are on `main`, so they delete the fakes and pull.
 
 ## Who uses your files
 
