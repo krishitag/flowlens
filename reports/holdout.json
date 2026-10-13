@@ -1,0 +1,14 @@
+{
+  "Bot": {
+    "lgbm_recall": 0.05555555555555555,
+    "iforest_recall": 0.06444444444444444,
+    "either_recall": 0.1111111111111111,
+    "n_flows": 450
+  },
+  "WebAttack": {
+    "lgbm_recall": 0.03549060542797495,
+    "iforest_recall": 0.6847599164926931,
+    "either_recall": 0.697286012526096,
+    "n_flows": 479
+  }
+}

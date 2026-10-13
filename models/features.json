@@ -1,0 +1,22 @@
+[
+  "Total Length of Fwd Packets",
+  "Flow IAT Std",
+  "SYN Flag Count",
+  "Bwd Packets/s",
+  "Total Fwd Packets",
+  "Flow Packets/s",
+  "Init_Win_bytes_forward",
+  "PSH Flag Count",
+  "Flow Duration",
+  "Init_Win_bytes_backward",
+  "Flow IAT Mean",
+  "Fwd Packet Length Mean",
+  "Flow Bytes/s",
+  "Fwd Packet Length Max",
+  "Average Packet Size",
+  "Total Backward Packets",
+  "Fwd Header Length",
+  "Bwd Packet Length Mean",
+  "Total Length of Bwd Packets",
+  "Fwd IAT Total"
+]

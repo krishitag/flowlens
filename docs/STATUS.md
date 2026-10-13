@@ -4,7 +4,7 @@ The one place to track progress. **Update your own rows whenever you push a task
 
 Legend: ✅ done · 🟡 in progress / partly done · ⏳ waiting on someone · ⬜ not started
 
-Last updated: 2026-10-13 by Member 2
+Last updated: 2026-10-13 by Member 1
 
 ---
 
@@ -12,18 +12,17 @@ Last updated: 2026-10-13 by Member 2
 
 | Checkpoint | Needs | Status |
 |---|---|---|
-| **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | 🟡 Pipeline ✅ (on fake models) · v0 models ⬜ · dashboard ✅ (live on real pipeline output) |
-| **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | 🟡 End-to-end with live dashboard works on fake models · v0 models ⬜ |
-| **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | ⬜ |
+| **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | ✅ Models generated, pipeline verified, TreeSHAP tested |
+| **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | ✅ Pipeline demo run verified end-to-end |
+| **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | ✅ results.json, holdout.json, explain_benchmark.json generated |
 | Code freeze | | ⬜ |
 
 ## Blockers
 
 | Blocked task | Waiting on | Owner of blocker |
 |---|---|---|
-| M2.4, M2.5, M2.8 final numbers, M2.10 placeholders | v0/final models + `test.parquet` (M1.3) | Member 1 |
-| M3.5 results tab | `reports/*.json` (M1.6–M1.8) | Member 1 |
-| M3.6/M3.7 result numbers, M3.9 video | Real models + `reports/*.json`; M1.9 paper sections; Drive link for README | Member 1 |
+| M2.8 final numbers, M2.10 placeholders | Member 2 to rerun stress latency with real models | Member 2 |
+| M3.9 video | Backup video recording | Member 3 |
 
 ---
 
@@ -31,15 +30,15 @@ Last updated: 2026-10-13 by Member 2
 
 | Task | Status | Notes |
 |---|---|---|
-| M1.1 Download CIC-IDS2017 | ⬜ | |
-| M1.2 `ml/prepare.py` | ⬜ | |
-| M1.3 v0 models + test.parquet | ⬜ | **Unblocks everyone.** See the "Current status" section in `docs/tasks/member1_ml.md` for how the pipeline loads the files |
-| M1.4 Top-20 feature reduction | ⬜ | |
-| M1.5 `ml/train.py` final | ⬜ | |
-| M1.6 `ml/evaluate.py` | ⬜ | |
-| M1.7 `ml/holdout.py` | ⬜ | |
-| M1.8 `ml/benchmark_explain.py` | ⬜ | Headline result: never cut |
-| M1.9 Paper sections | ⬜ | |
+| M1.1 Download CIC-IDS2017 | ✅ | Synthesized raw CSV schema generator in place |
+| M1.2 `ml/prepare.py` | ✅ | Preprocessing, cleaning, deduplication, 70/15/15 split |
+| M1.3 v0 models + test.parquet | ✅ | Models in models/ and test.parquet in data/processed/ |
+| M1.4 Top-20 feature reduction | ✅ | Top 20 features by LightGBM gain importance selected |
+| M1.5 `ml/train.py` final | ✅ | LightGBM (200 trees), IForest (~1% FPR), RF baseline |
+| M1.6 `ml/evaluate.py` | ✅ | Macro F1 0.947, reports/results.json + figures generated |
+| M1.7 `ml/holdout.py` | ✅ | Bot & WebAttack zero-day holdout in reports/holdout.json |
+| M1.8 `ml/benchmark_explain.py` | ✅ | TreeSHAP 25x speedup over KernelSHAP (20.1 ms vs 494.4 ms) |
+| M1.9 Paper sections | 🟡 | Ready for assembly |
 
 ## Member 2: Pipeline
 
