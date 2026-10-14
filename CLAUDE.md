@@ -21,7 +21,7 @@ Never rename columns, tables, files or JSON keys from these contracts. If a task
 - Python 3.11. Deps only from `requirements.txt` unless the user approves adding one.
 - Never use `Destination Port`, IPs, Flow ID or timestamps as model features.
 - Explanations: `shap.TreeExplainer`, built once at startup. KernelExplainer only in `ml/benchmark_explain.py`.
-- Never commit anything under `data/`.
+- Never commit anything under `data/`, with one exception: `data/processed/test.parquet` (8 MB, real test split) is tracked so the pipeline runs after a fresh clone. It was force-added past `.gitignore`; only recommit it with `git add -f` when `ml/prepare.py` is deliberately rerun.
 - Keep code simple and readable; this is a 2-day university project, not production.
 - After implementing a task, tell the user the exact command to verify its "done when" condition from PLAN.md.
 
@@ -40,7 +40,7 @@ Ask the user which member they are if it isn't clear. `docs/STATUS.md` is the on
 - Never push to `main` directly, and never force-push.
 - Don't add `Co-authored-by: Claude` trailers or "Generated with Claude Code" lines to commits or PRs.
 - Stage files by name. Never `git add .`, because the fake `models/*` files aren't gitignored.
-- `tests/make_fake_models.py` writes fake `models/*` and `test.parquet` for development. Never commit them, and never run it once real models are in `models/`.
+- `tests/make_fake_models.py` writes fake `models/*` and `test.parquet` for development. Never commit them, and never run it once real models are in `models/` (it would also overwrite the tracked real `test.parquet`).
 
 ## Commands
 - Setup: `pip install -r requirements.txt` (macOS: `brew install libomp` for LightGBM)
@@ -57,4 +57,5 @@ Keep this updated at the end of every task.
 - Pipeline (M2.1–M2.9): done, 23 tests pass, runs on real models. Per-window explanation cap (`--explain-cap`, default 300). Stress: e2e/window p95 223 ms (1,251 ms without the cap). Demo explains 99.7% of alerts. Slowscan never triggers ELEVATED (known limitation).
 - Paper: `paper/pipeline_section.md` drafted, numbers are placeholders (fill from reports/).
 - Paper: Dataset + Models sections written (M1.9); results sentences with Member 3.
-- Still to do: share `test.parquet` via Drive, M2.10 pipeline section numbers (incl. `[iforest_sign_corr]` = 0.995), dashboard sidebar to ignore unexplained alerts (explain_ms = 0).
+- `data/processed/test.parquet` is in git (comes with `git pull`); train/val stay local.
+- Still to do: M2.10 pipeline section numbers (incl. `[iforest_sign_corr]` = 0.995), dashboard sidebar to ignore unexplained alerts (explain_ms = 0).
