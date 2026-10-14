@@ -3,7 +3,7 @@
 Explainable real-time network anomaly detection (VIT Computer Networks project). Full plan: `docs/PLAN.md` — read it before doing anything.
 
 ## Folder ownership (do not edit outside your member's folders)
-- Member 1 (ML): now handled by Member 2 (Naman). `ml/`, `models/` and the ML reports may be edited in Member 2's sessions.
+- Member 1 (ML): now handled by Member 2 (Krishita). `ml/`, `models/` and the ML reports may be edited in Member 2's sessions.
 - Member 2 (pipeline): `pipeline/`, `scenarios/`, `tests/`, `reports/pipeline_latency.json`
 - Member 3 (dashboard/report): `dashboard/`, `paper/`, `README.md`
 - Shared (change only if the user explicitly says the team agreed): `contracts/`, `requirements.txt`, `CLAUDE.md`, `docs/`
