@@ -4,7 +4,7 @@ The one place to track progress. **Update your own rows whenever you push a task
 
 Legend: ✅ done · 🟡 in progress / partly done · ⏳ waiting on someone · ⬜ not started
 
-Last updated: 2026-10-13 by Member 2
+Last updated: 2026-10-15 by Member 2 (also handling ML)
 
 ---
 
@@ -12,33 +12,35 @@ Last updated: 2026-10-13 by Member 2
 
 | Checkpoint | Needs | Status |
 |---|---|---|
-| **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | 🟡 Pipeline ✅ (on fake models) · v0 models ⬜ · dashboard ✅ (live on real pipeline output) |
-| **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | 🟡 End-to-end with live dashboard works on fake models · v0 models ⬜ |
-| **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | ⬜ |
+| **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | 🟡 Real models on `main` and pipeline runs on them · test.parquet Drive link not shared yet · dashboard ✅ |
+| **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | ✅ `pipeline.run` demo works end to end on real models (ELEVATED during DoS + PortScan) |
+| **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | 🟡 All `reports/*.json` + figures on `main` from real models · Member 3 to confirm the results tab |
 | Code freeze | | ⬜ |
 
 ## Blockers
 
 | Blocked task | Waiting on | Owner of blocker |
 |---|---|---|
-| M2.4, M2.5, M2.8 final numbers, M2.10 placeholders | v0/final models + `test.parquet` (M1.3) | Member 1 |
-| M3.5 results tab | `reports/*.json` (M1.6–M1.8) | Member 1 |
-| M3.6/M3.7 result numbers, M3.9 video | Real models + `reports/*.json`; M1.9 paper sections; Drive link for README | Member 1 |
+| Teammates running on real models | ML PR merged + test.parquet Drive link | Member 2 |
+| M3.4 sidebar explain p50/p95 | With the explanation cap, unexplained alerts have `explain_ms = 0`; the sidebar should use `WHERE explain_ms > 0` (rare in demo: 17 of 6,550) | Member 3 |
+| M1.7 holdout story | Held-out Bot: 0% caught by anything; held-out DoS: either 37.8%. IForest kept at 1% FPR by decision: write up as a limitation | Member 2 |
+| M3.5 results tab | Nothing: real `reports/*.json` are on `main` | — |
+| M3.6/M3.7 result numbers, M3.9 video | Real models + `reports/*.json`; M1.9 paper sections; Drive link for README | Member 2 |
 
 ---
 
-## Member 1: ML & Evaluation
+## Member 1: ML & Evaluation (now handled by Member 2)
 
 | Task | Status | Notes |
 |---|---|---|
-| M1.1 Download CIC-IDS2017 | ⬜ | |
-| M1.2 `ml/prepare.py` | ⬜ | |
-| M1.3 v0 models + test.parquet | ⬜ | **Unblocks everyone.** See the "Current status" section in `docs/tasks/member1_ml.md` for how the pipeline loads the files |
-| M1.4 Top-20 feature reduction | ⬜ | |
-| M1.5 `ml/train.py` final | ⬜ | |
-| M1.6 `ml/evaluate.py` | ⬜ | |
-| M1.7 `ml/holdout.py` | ⬜ | |
-| M1.8 `ml/benchmark_explain.py` | ⬜ | Headline result: never cut |
+| M1.1 Download CIC-IDS2017 | ✅ | |
+| M1.2 `ml/prepare.py` | ✅ | train 324k / val 69k / test 69k rows, 76 features |
+| M1.3 v0 models + test.parquet | 🟡 | Real models on `main`, `pipeline.explainer` check passes (corr 0.995). Only the test.parquet Drive link is left |
+| M1.4 Top-20 feature reduction | ✅ | Val macro F1 0.9901 (76) → 0.9721 (20), −1.8 pts; WebAttack F1 drops most (0.86) |
+| M1.5 `ml/train.py` final | ✅ | One command, ~30 s. rf.joblib 27 MB. IForest recall on attacks is very low (see Blockers) |
+| M1.6 `ml/evaluate.py` | ✅ | Test macro F1 LightGBM 0.9719 / RF 0.9856; benign FPR 0.37% / 0.14% |
+| M1.7 `ml/holdout.py` | ✅ | DoS and Bot. Recall LGBM/IForest/either: DoS 4.9/33.0/37.8%, Bot 0/0/0% |
+| M1.8 `ml/benchmark_explain.py` | ✅ | TreeSHAP p50 2.4 ms vs Kernel SHAP ~1.9–2.6 s per flow: ~800–1,100× at the median (range over 3 Kernel SHAP rounds; it varies run to run) |
 | M1.9 Paper sections | ⬜ | |
 
 ## Member 2: Pipeline
@@ -48,12 +50,12 @@ Last updated: 2026-10-13 by Member 2
 | M2.1 `pipeline/store.py` | ✅ | WAL checked |
 | M2.2 `pipeline/replayer.py` | ✅ | Poisson flow counts per window |
 | M2.3 `pipeline/monitor.py` | ✅ | Exit rule changed to z < 2 for 5 windows (see PLAN.md §2) |
-| M2.4 `pipeline/detector.py` | ⏳ | Works on fake models; rerun on v0 |
-| M2.5 `pipeline/explainer.py` | ⏳ | Works on fake models; check sentences + IForest sign on v0 |
-| M2.6 `pipeline/run.py` | ✅ | Ran live (`--speed 1`) with the dashboard open: ELEVATED ≈32–54 s and 72–89 s, RUN COMPLETE at 104 s (fake models) |
+| M2.4 `pipeline/detector.py` | ✅ | Runs on real models (demo: detect p50 0.02 ms) |
+| M2.5 `pipeline/explainer.py` | ✅ | Real models: IForest SHAP vs score corr 0.995, sentences sensible, explain p50 0.56 ms |
+| M2.6 `pipeline/run.py` | ✅ | `--explain-cap` (default 300, most confident first). Demo: ELEVATED 32–53 s and 72–88 s, 6,550 alerts, 6,533 explained (99.7%); slowscan: never ELEVATED, 15 PortScan alerts (10% sampling) + 2 benign FPs |
 | M2.7 Scenarios | ✅ | demo, stress, slowscan |
-| M2.8 Latency report | ⏳ | Script done; rerun on real models |
-| M2.9 Tests | ✅ | 18 passing |
+| M2.8 Latency report | ✅ | Stress, real models, explain cap 300: detect p50 0.014 ms, explain p50 0.54 ms, e2e/window p50 194 ms, p95 223 ms (was 1,251 ms without the cap). ELEVATED: 100% scored, 18% explained |
+| M2.9 Tests | ✅ | 23 passing (incl. `tests/test_explain_cap.py`) |
 | M2.10 Paper section | 🟡 | `paper/pipeline_section.md`: fill in the `[placeholders]` |
 
 ## Member 3: Dashboard & Report

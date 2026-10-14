@@ -1,0 +1,22 @@
+{
+  "tree_shap": {
+    "mean_ms": 2.42356511997059,
+    "p50_ms": 2.42562557104975,
+    "p95_ms": 2.507097483612597,
+    "n_flows": 200
+  },
+  "kernel_shap": {
+    "mean_ms": 2618.228440019302,
+    "p50_ms": 2616.5110629517585,
+    "p95_ms": 2982.1004811441526,
+    "n_flows": 50,
+    "rounds": 3
+  },
+  "speedup_p50_range": [
+    801.0406515848917,
+    1080.111143160396
+  ],
+  "speedup_note": "~801-1,080x at the median, across 3 Kernel SHAP rounds",
+  "kernel_background": 100,
+  "flagged_test_flows": 25055
+}

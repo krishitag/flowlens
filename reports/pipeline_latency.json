@@ -1,0 +1,41 @@
+{
+  "scenario": "scenarios/stress.json",
+  "windows": 100,
+  "total_flows": 108111,
+  "detect_ms": {
+    "p50": 0.014,
+    "p95": 0.0192,
+    "mean": 0.0149,
+    "n": 98084
+  },
+  "explain_ms": {
+    "p50": 0.5431,
+    "p95": 0.6028,
+    "mean": 0.5514,
+    "n": 17690
+  },
+  "e2e_ms_per_window": {
+    "p50": 194.1016,
+    "p95": 223.4029,
+    "mean": 124.9812,
+    "n": 100
+  },
+  "by_state": {
+    "NORMAL": {
+      "windows": 38,
+      "flows": 11138,
+      "scored": 1111,
+      "explained": 284,
+      "pct_scored": 9.97,
+      "pct_explained": 2.55
+    },
+    "ELEVATED": {
+      "windows": 62,
+      "flows": 96973,
+      "scored": 96973,
+      "explained": 17406,
+      "pct_scored": 100.0,
+      "pct_explained": 17.95
+    }
+  }
+}
