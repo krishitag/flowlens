@@ -43,6 +43,61 @@ scenario.json ─▶ Replayer ─▶ Tier 1: EWMA monitor ─▶ Tier 2: detecto
 
 The models use 20 flow features (`models/features.json`). Destination port, IP addresses, flow IDs and timestamps are never used as features, because they would leak the answer.
 
+## Architecture
+
+FlowLens has two halves that meet at files on disk. The **offline** half (`ml/`) turns the raw dataset into trained models and evaluation reports. The **online** half (`pipeline/`) replays the test split as live traffic, using those models, and writes events to SQLite for the dashboard.
+
+```mermaid
+flowchart LR
+    subgraph offline["Offline: ml/ (run once)"]
+        raw["data/raw/*.csv<br/>CIC-IDS2017"] --> prep["prepare.py<br/>clean, dedupe, group labels,<br/>70/15/15 split"]
+        prep --> splits[("train / val / test<br/>.parquet")]
+        splits --> train["train.py<br/>LightGBM, Isolation Forest,<br/>RF baseline"]
+        train --> models[("models/<br/>models, 20 features, labels,<br/>IForest threshold, baselines")]
+        splits --> evalx["evaluate.py, holdout.py,<br/>benchmark_explain.py"]
+        models --> evalx
+        evalx --> reports[("reports/<br/>*.json + figures")]
+    end
+
+    subgraph online["Online: pipeline/run.py (every 1-second window)"]
+        scen["scenarios/*.json"] --> rep["Replayer"]
+        rep --> mon["Tier 1: EWMA monitor<br/>NORMAL / ELEVATED"]
+        mon --> det["Tier 2: Detector<br/>NORMAL: LightGBM on 10%<br/>ELEVATED: LightGBM + IForest on all"]
+        det -- "flagged flows" --> cap["Explanation cap<br/>at most 300, most confident first"]
+        cap --> exp["Explainer<br/>TreeSHAP + benign percentiles<br/>top 3 features as sentences"]
+        exp --> db[("data/events.db<br/>SQLite, WAL mode")]
+        cap -- "over the cap:<br/>stored unexplained" --> db
+    end
+
+    splits -- "test.parquet" --> rep
+    models --> det
+    models --> exp
+    db -- "read-only, every 1 s" --> live["Dashboard<br/>Live monitor tab"]
+    reports --> res["Dashboard<br/>Results tab"]
+```
+
+### One window, step by step
+
+1. **Replay.** The replayer draws the window's flow count from a Poisson distribution around the scenario's rate and samples that many flows from `test.parquet` with the segment's label, mixing in benign flows if the segment says so.
+2. **Tier 1.** The monitor compares the flow count with its EWMA baseline and updates the state (NORMAL or ELEVATED). The baseline is frozen while ELEVATED, so an attack never becomes the new normal.
+3. **Tier 2.** The detector scores 10% of the flows with LightGBM in NORMAL, or every flow with LightGBM and the Isolation Forest in ELEVATED. A flow is flagged if LightGBM predicts an attack with probability ≥ 0.5, or its Isolation Forest score is below the threshold. Each alert records which model flagged it (`lgbm`, `iforest` or `both`).
+4. **Explain.** Up to 300 flagged flows, most confident first, go through TreeSHAP in one batch. Each one's top 3 features are compared with the benign percentiles in `models/baselines.json` and turned into sentences.
+5. **Store.** One `traffic_windows` row is written, then all of the window's `alerts` rows in one batch. The dashboard reads the same database once per second, read-only; WAL mode lets it read while the pipeline writes.
+
+### Interfaces between the parts
+
+The parts only talk through these files, whose formats are frozen in [docs/PLAN.md](docs/PLAN.md) §4. That's what let the three of us build them in parallel.
+
+| File | Written by | Read by | Contents |
+|---|---|---|---|
+| `data/processed/test.parquet` | `ml/prepare.py` | replayer, `ml/evaluate.py` | 76 feature columns + `label` + `dst_port` |
+| `models/*.joblib` | `ml/train.py` | detector, explainer | LightGBM, Isolation Forest, Random Forest (baseline only) |
+| `models/features.json`, `labels.json` | `ml/train.py` | detector, explainer | the 20 features in model order; class id → name |
+| `models/iforest_threshold.json` | `ml/train.py` | detector | Isolation Forest `score_samples` cut-off (~1% benign FPR) |
+| `models/baselines.json` | `ml/train.py` | explainer | 101 benign percentiles + the 99.9th, per feature |
+| `data/events.db` | `pipeline/store.py` | dashboard | tables `traffic_windows`, `alerts`, `run_meta` ([contracts/schema.sql](contracts/schema.sql)) |
+| `reports/*.json`, `reports/figures/` | `ml/*.py`, `pipeline/latency_report.py` | dashboard Results tab, `paper/build.py` | evaluation, holdout, SHAP benchmark, pipeline latency |
+
 ## Quick start
 
 Requires **Python 3.11** (3.12 also works).
