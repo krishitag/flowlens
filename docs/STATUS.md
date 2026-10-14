@@ -40,7 +40,7 @@ Last updated: 2026-10-15 by Member 2 (also handling ML)
 | M1.6 `ml/evaluate.py` | ✅ | Test macro F1 LightGBM 0.9719 / RF 0.9856; benign FPR 0.37% / 0.14% |
 | M1.7 `ml/holdout.py` | ✅ | DoS and Bot. Recall LGBM/IForest/either: DoS 4.9/33.0/37.8%, Bot 0/0/0% |
 | M1.8 `ml/benchmark_explain.py` | ✅ | TreeSHAP p50 2.4 ms vs Kernel SHAP ~1.9–2.6 s per flow: ~800–1,100× at the median (range over 3 Kernel SHAP rounds; it varies run to run) |
-| M1.9 Paper sections | 🟡 | `paper/sections/03_dataset.md` and `04_models.md` rewritten with real numbers (as their comments asked). Results sentences for `07_results.md` sent to Member 3 |
+| M1.9 Paper sections | ✅ | `paper/sections/03_dataset.md` and `04_models.md` rewritten with real numbers. Results sentences + fixes for `07_results.md` sent to Member 3 |
 
 ## Member 2: Pipeline
 
@@ -55,7 +55,7 @@ Last updated: 2026-10-15 by Member 2 (also handling ML)
 | M2.7 Scenarios | ✅ | demo, stress, slowscan |
 | M2.8 Latency report | ✅ | Stress, real models, explain cap 300: detect p50 0.014 ms, explain p50 0.54 ms, e2e/window p50 194 ms, p95 223 ms (was 1,251 ms without the cap). ELEVATED: 100% scored, 18% explained |
 | M2.9 Tests | ✅ | 23 passing (incl. `tests/test_explain_cap.py`) |
-| M2.10 Paper section | 🟡 | `paper/pipeline_section.md`: fill in the `[placeholders]` |
+| M2.10 Paper section | ✅ | `paper/pipeline_section.md`: all placeholders filled from real models; new subsection on the 300 explanation cap (stress p95 1,251 → 223 ms); slow-scan rechecked |
 
 ## Member 3: Dashboard & Report
 
