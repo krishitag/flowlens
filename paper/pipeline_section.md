@@ -43,7 +43,7 @@ Explanations use `shap.TreeExplainer`, which computes exact Shapley values for t
 
 ### Isolation Forest sign handling
 
-TreeSHAP explains an Isolation Forest in terms of path length. A short path means a point is easy to isolate, and therefore anomalous. A negative SHAP value thus pushes a flow toward "anomalous". The explainer negates these values, so that for both models a positive contribution means "pushes toward anomalous", and the dashboard can show them on the same scale. To check this sign convention, we sample 500 test flows, sum each flow's raw Isolation Forest SHAP values, and correlate the sums with the model's `score_samples` output, where higher means more normal. A correct sign gives a strong positive correlation. On the final models, the correlation was [iforest_sign_corr].
+TreeSHAP explains an Isolation Forest in terms of path length. A short path means a point is easy to isolate, and therefore anomalous. A negative SHAP value thus pushes a flow toward "anomalous". The explainer negates these values, so that for both models a positive contribution means "pushes toward anomalous", and the dashboard can show them on the same scale. To check this sign convention, we sample 500 test flows, sum each flow's raw Isolation Forest SHAP values, and correlate the sums with the model's `score_samples` output, where higher means more normal. A correct sign gives a strong positive correlation. On the final models, the correlation was 0.995.
 
 ### From contributions to sentences
 
@@ -62,6 +62,12 @@ Unit tests cover each rule with hand-made baselines, including a feature where 6
 
 Each alert stores the three features as JSON, each with its name, value, contribution and percentile, together with the sentences. The dashboard uses these to draw a contribution bar chart for the selected alert.
 
+### Per-window explanation cap
+
+Explaining every flagged flow does not fit in a one-second window under heavy attack traffic. In the stress scenario below, the ELEVATED state explained 88% of about 1,560 flows per second. At roughly 0.55 ms per flow, that is close to 800 ms of explanation work per window before detection and database writes, and end-to-end latency reached 1,251 ms per window at the 95th percentile, over the 1,000 ms budget.
+
+The pipeline therefore explains at most 300 flagged flows per window (`--explain-cap`, default 300). At about 0.55 ms per flow, 300 explanations take about 165 ms, leaving most of the window for detection and storage. The cap is well above the number of alerts in a normal attack window: in the demonstration scenario only one window, with 314 alerts, exceeded it. When a window has more flagged flows than the cap, the most confident ones are explained first: flows flagged by LightGBM (alone or with the Isolation Forest) in order of predicted-class probability, then flows flagged only by the Isolation Forest, most anomalous score first. The remaining flows are still stored as alerts, with their prediction and scores, but with no top features and the explanation "Not explained: per-window explanation budget reached". The `explained` count in `traffic_windows` records only the flows that were actually explained.
+
 ## Latency Evaluation
 
 Latency is measured with a stress scenario of five 20-second segments: benign traffic at 200 flows/s, DoS at 2,000 flows/s with 30% benign flows mixed in, DDoS at 2,000 flows/s, PortScan at 1,000 flows/s, and benign traffic at 200 flows/s. The scenario is replayed with no delay into a temporary database, and four quantities are recorded:
@@ -71,12 +77,16 @@ Latency is measured with a stress scenario of five 20-second segments: benign tr
 - **End-to-end latency per window:** the time from receiving a window to finishing the database writes for it.
 - **Work per state:** the share of flows scored and explained in NORMAL and in ELEVATED windows.
 
-On the final models, detection latency was [p50_detect_ms] ms at the median and [p95_detect_ms] ms at the 95th percentile. Explanation latency was [p50_explain_ms] ms and [p95_explain_ms] ms. End-to-end latency per window was [p50_e2e_ms] ms and [p95_e2e_ms] ms, compared with the window length of 1,000 ms. In NORMAL windows, [pct_scored_normal]% of flows were scored and [pct_explained_normal]% explained. In ELEVATED windows the figures were [pct_scored_elevated]% and [pct_explained_elevated]%.
+On the final models, the stress scenario replayed 108,111 flows in 100 windows, 62 of them ELEVATED. Detection latency was 0.014 ms per flow at the median and 0.019 ms at the 95th percentile. Explanation latency was 0.54 ms and 0.60 ms. This is lower than the 2.4 ms per flow measured for TreeSHAP in the explainer benchmark, because the pipeline explains each window's flows in one batch rather than one call per flow. End-to-end latency per window was 194 ms at the median and 223 ms at the 95th percentile, compared with the window length of 1,000 ms. Without the explanation cap, the same scenario took 627 ms and 1,251 ms.
+
+In NORMAL windows, 9.97% of flows were scored and 2.55% explained. In ELEVATED windows, 100% were scored and 17.95% explained; without the cap, 88.19% were explained. In the demonstration scenario the cap explained 6,533 of 6,550 alerts (99.7%).
 
 ## Limitations
 
-**Low-and-slow attacks.** Tier 1 reacts only to changes in total traffic volume. A scan that adds a few flows per second to normal traffic does not change the window counts enough to trigger ELEVATED. In the slow-scan scenario, 30 seconds of PortScan at about 5 flows/s were mixed into roughly 40 benign flows/s. The system stayed NORMAL for the entire run, and the highest z-score during the scan was 3.41, in a single window. Only the 10% sample was scored, and 15 of the 153 scan flows raised alerts. Such attacks are therefore detected only at the sampling rate. This is the cost of avoiding full scoring and explanation during normal operation.
+**Low-and-slow attacks.** Tier 1 reacts only to changes in total traffic volume. A scan that adds a few flows per second to normal traffic does not change the window counts enough to trigger ELEVATED. In the slow-scan scenario, 30 seconds of PortScan at about 5 flows/s were mixed into roughly 40 benign flows/s. The system stayed NORMAL for the entire run, and the highest z-score during the scan was 3.41, in a single window. Only the 10% sample was scored, and 15 of the 153 scan flows raised alerts, all correctly labelled PortScan. Two benign flows were also flagged, as WebAttack. Such attacks are therefore detected only at the sampling rate. This is the cost of avoiding full scoring and explanation during normal operation.
 
 **Frozen baseline.** Because the baseline is not updated while ELEVATED, the monitor assumes that every period of high traffic eventually ends. A legitimate, lasting increase in traffic, such as a new service or a busy period, would keep the system ELEVATED indefinitely. Every flow would then be scored and explained, removing the savings from tiering, until an operator reset the baseline.
+
+**Unexplained alerts under heavy load.** When a window has more than 300 flagged flows, the least confident ones are stored without an explanation. Under the stress scenario, most ELEVATED alerts are unexplained. The analyst still sees their predicted class and scores, but not why they were flagged.
 
 **Volume-only monitoring.** The monitor uses flow counts only. Attacks that change what the traffic looks like without changing how much there is are left entirely to the 10% sample in NORMAL state.
