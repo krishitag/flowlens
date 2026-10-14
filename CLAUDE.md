@@ -56,4 +56,5 @@ Keep this updated at the end of every task.
 - Reports (real): `reports/results.json`, `holdout.json` (DoS held out: either 37.8%; Bot: 0%), `explain_benchmark.json` (TreeSHAP p50 2.4 ms vs Kernel SHAP ~2–2.6 s: ~800–1,100×, a range because Kernel SHAP varies by run), figures in `reports/figures/`.
 - Pipeline (M2.1–M2.9): done, 23 tests pass, runs on real models. Per-window explanation cap (`--explain-cap`, default 300). Stress: e2e/window p95 223 ms (1,251 ms without the cap). Demo explains 99.7% of alerts. Slowscan never triggers ELEVATED (known limitation).
 - Paper: `paper/pipeline_section.md` drafted, numbers are placeholders (fill from reports/).
-- Still to do: share `test.parquet` via Drive, M1.9 + M2.10 paper sections, dashboard sidebar to ignore unexplained alerts (explain_ms = 0).
+- Paper: Dataset + Models sections written (M1.9); results sentences with Member 3.
+- Still to do: share `test.parquet` via Drive, M2.10 pipeline section numbers (incl. `[iforest_sign_corr]` = 0.995), dashboard sidebar to ignore unexplained alerts (explain_ms = 0).
