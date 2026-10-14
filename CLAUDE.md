@@ -3,7 +3,7 @@
 Explainable real-time network anomaly detection (VIT Computer Networks project). Full plan: `docs/PLAN.md` — read it before doing anything.
 
 ## Folder ownership (do not edit outside your member's folders)
-- Member 1 (ML): `ml/`, `models/`, `reports/results.json`, `reports/holdout.json`, `reports/explain_benchmark.json`, `reports/figures/`
+- Member 1 (ML): now handled by Member 2 (Krishita). `ml/`, `models/` and the ML reports may be edited in Member 2's sessions.
 - Member 2 (pipeline): `pipeline/`, `scenarios/`, `tests/`, `reports/pipeline_latency.json`
 - Member 3 (dashboard/report): `dashboard/`, `paper/`, `README.md`
 - Shared (change only if the user explicitly says the team agreed): `contracts/`, `requirements.txt`, `CLAUDE.md`, `docs/`
@@ -48,3 +48,11 @@ Ask the user which member they are if it isn't clear. `docs/STATUS.md` is the on
 - Pipeline: `python -m pipeline.run --scenario scenarios/demo.json --speed 1`
 - Dashboard: `streamlit run dashboard/app.py` (from the repo root, so it picks up `.streamlit/config.toml`)
 - Paper: `python paper/build.py` rebuilds `paper/paper.md` from `paper/sections/*` + `paper/pipeline_section.md`
+
+## Status
+Keep this updated at the end of every task.
+- Data: real CIC-IDS2017 processed (`data/processed/{train,val,test}.parquet`, 76 features + label + dst_port). Test rows: BENIGN 45001, DoS 7500, DDoS 7500, PortScan 7500, BruteForce 1373, WebAttack 321, Bot 292.
+- Models: trained on real data (`ml/train.py`, 20 features). Val macro F1 0.9721 (76-feature: 0.9901). IForest catches almost no attacks at 1% FPR (DoS 33%, others ~0%). Not pushed yet.
+- Pipeline (M2.1–M2.9): done; demo scenario runs end to end on real models (detect p50 0.02 ms, explain p50 0.49 ms).
+- Paper: `paper/pipeline_section.md` drafted, numbers are placeholders.
+- Still to do: push models + share `test.parquet`, M1.6 eval, M1.7 holdout, M1.8 SHAP benchmark, M2.8 latency report on real models.
