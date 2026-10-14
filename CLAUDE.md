@@ -52,7 +52,8 @@ Ask the user which member they are if it isn't clear. `docs/STATUS.md` is the on
 ## Status
 Keep this updated at the end of every task.
 - Data: real CIC-IDS2017 processed (`data/processed/{train,val,test}.parquet`, 76 features + label + dst_port). Test rows: BENIGN 45001, DoS 7500, DDoS 7500, PortScan 7500, BruteForce 1373, WebAttack 321, Bot 292.
-- Models: trained on real data (`ml/train.py`, 20 features). Val macro F1 0.9721 (76-feature: 0.9901). IForest catches almost no attacks at 1% FPR (DoS 33%, others ~0%). Not pushed yet.
-- Pipeline (M2.1–M2.9): done; demo scenario runs end to end on real models (detect p50 0.02 ms, explain p50 0.49 ms).
-- Paper: `paper/pipeline_section.md` drafted, numbers are placeholders.
-- Still to do: push models + share `test.parquet`, M1.6 eval, M1.7 holdout, M1.8 SHAP benchmark, M2.8 latency report on real models.
+- Models: trained on real data (`ml/train.py`, 20 features). Test macro F1 LightGBM 0.9719 (RF 0.9856), benign FPR 0.37%; WebAttack F1 0.86 is the weak class. IForest at 1% FPR: DoS recall 33%, others ~0% (kept by decision; limitation).
+- Reports (real): `reports/results.json`, `holdout.json` (DoS held out: either 37.8%; Bot: 0%), `explain_benchmark.json` (TreeSHAP p50 2.4 ms vs Kernel SHAP ~2–2.6 s: ~800–1,100×, a range because Kernel SHAP varies by run), figures in `reports/figures/`.
+- Pipeline (M2.1–M2.9): done, 23 tests pass, runs on real models. Per-window explanation cap (`--explain-cap`, default 300). Stress: e2e/window p95 223 ms (1,251 ms without the cap). Demo explains 99.7% of alerts. Slowscan never triggers ELEVATED (known limitation).
+- Paper: `paper/pipeline_section.md` drafted, numbers are placeholders (fill from reports/).
+- Still to do: share `test.parquet` via Drive, M1.9 + M2.10 paper sections, dashboard sidebar to ignore unexplained alerts (explain_ms = 0).
