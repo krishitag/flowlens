@@ -22,8 +22,8 @@ Last updated: 2026-10-15 by Member 2 (also handling ML)
 | Blocked task | Waiting on | Owner of blocker |
 |---|---|---|
 | M3.4 sidebar explain p50/p95 | With the explanation cap, unexplained alerts have `explain_ms = 0`; the sidebar should use `WHERE explain_ms > 0` (rare in demo: 17 of 6,550) | Member 3 |
-| M1.7 holdout story | Held-out Bot: 0% caught by anything; held-out DoS: either 37.8%. IForest kept at 1% FPR by decision: write up as a limitation | Member 2 |
 | M3.5 results tab | Nothing: real `reports/*.json` are on `main` | — |
+| M3.8 README: rerunning ML | To rerun holdout/benchmark, download CIC-IDS2017 MachineLearningCVE from Kaggle into data/raw/ and run python ml/prepare.py | Member 3 |
 | M3.6/M3.7 result numbers, M3.9 video | Nothing from Member 2 left: models, reports, M1.9 sections on `main`. README: no Drive link needed, `test.parquet` comes with `git pull` | — |
 
 ---
@@ -36,7 +36,7 @@ Last updated: 2026-10-15 by Member 2 (also handling ML)
 | M1.2 `ml/prepare.py` | ✅ | train 324k / val 69k / test 69k rows, 76 features |
 | M1.3 v0 models + test.parquet | ✅ | Real models on `main`, `pipeline.explainer` check passes (corr 0.995). `data/processed/test.parquet` committed (the one file under `data/` in git), so no Drive link |
 | M1.4 Top-20 feature reduction | ✅ | Val macro F1 0.9901 (76) → 0.9721 (20), −1.8 pts; WebAttack F1 drops most (0.86) |
-| M1.5 `ml/train.py` final | ✅ | One command, ~30 s. rf.joblib 27 MB. IForest recall on attacks is very low (see Blockers) |
+| M1.5 `ml/train.py` final | ✅ | One command, ~30 s. rf.joblib 27 MB. IForest kept at 1% FPR by decision: catches 33% of DoS, ~0% of other attacks (a limitation for the paper) |
 | M1.6 `ml/evaluate.py` | ✅ | Test macro F1 LightGBM 0.9719 / RF 0.9856; benign FPR 0.37% / 0.14% |
 | M1.7 `ml/holdout.py` | ✅ | DoS and Bot. Recall LGBM/IForest/either: DoS 4.9/33.0/37.8%, Bot 0/0/0% |
 | M1.8 `ml/benchmark_explain.py` | ✅ | TreeSHAP p50 2.4 ms vs Kernel SHAP ~1.9–2.6 s per flow: ~800–1,100× at the median (range over 3 Kernel SHAP rounds; it varies run to run) |
@@ -76,6 +76,6 @@ Last updated: 2026-10-15 by Member 2 (also handling ML)
 | Item | Status | Notes |
 |---|---|---|
 | `contracts/schema.sql` | ✅ | Exactly as PLAN.md 4.3 |
-| `requirements.txt` | ✅ | PLAN.md list + pytest |
+| `requirements.txt` | ✅ | PLAN.md list + pytest + matplotlib (for `ml/` figures) |
 | `.gitignore` covers `data/`, `*.db` | ✅ | Exception: `data/processed/test.parquet` is tracked (force-added). Don't run `make_fake_models.py`, it would overwrite it. Don't `git add .` |
 | Team agreed on exit-rule change | ⬜ | z < 2 for 5 windows instead of z < 1 for 10 |
