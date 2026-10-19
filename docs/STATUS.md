@@ -4,7 +4,7 @@ The one place to track progress. **Update your own rows whenever you push a task
 
 Legend: ✅ done · 🟡 in progress / partly done · ⏳ waiting on someone · ⬜ not started
 
-Last updated: 2026-10-19 by Member 3
+Last updated: 2026-10-19 by Member 2
 
 ---
 
@@ -26,21 +26,11 @@ Last updated: 2026-10-19 by Member 3
 
 ---
 
-## Member 1: ML & Evaluation (now handled by Member 2)
+## Member 1: ML & Evaluation
 
-| Task | Status | Notes |
-|---|---|---|
-| M1.1 Download CIC-IDS2017 | ✅ | |
-| M1.2 `ml/prepare.py` | ✅ | train 324k / val 69k / test 69k rows, 76 features |
-| M1.3 v0 models + test.parquet | ✅ | Real models on `main`, `pipeline.explainer` check passes (corr 0.995). `data/processed/test.parquet` committed (the one file under `data/` in git), so no Drive link |
-| M1.4 Top-20 feature reduction | ✅ | Val macro F1 0.9901 (76) → 0.9721 (20), −1.8 pts; WebAttack F1 drops most (0.86) |
-| M1.5 `ml/train.py` final | ✅ | One command, ~30 s. rf.joblib 27 MB. IForest kept at 1% FPR by decision: catches 33% of DoS, ~0% of other attacks (a limitation for the paper) |
-| M1.6 `ml/evaluate.py` | ✅ | Test macro F1 LightGBM 0.9719 / RF 0.9856; benign FPR 0.37% / 0.14% |
-| M1.7 `ml/holdout.py` | ✅ | DoS and Bot. Recall LGBM/IForest/either: DoS 4.9/33.0/37.8%, Bot 0/0/0% |
-| M1.8 `ml/benchmark_explain.py` | ✅ | TreeSHAP p50 2.4 ms vs Kernel SHAP ~1.9–2.6 s per flow: ~800–1,100× at the median (range over 3 Kernel SHAP rounds; it varies run to run) |
-| M1.9 Paper sections | ✅ | `paper/sections/03_dataset.md` and `04_models.md` rewritten with real numbers. Results sentences + fixes for `07_results.md` sent to Member 3 |
+Member 1 wrote the first version of the ML scripts (PR #2) and worked on the paper and slides with Member 3. The M1 tasks were finished by Member 2 and are tracked in Member 2's table below.
 
-## Member 2: Pipeline
+## Member 2: Pipeline + ML & Evaluation
 
 | Task | Status | Notes |
 |---|---|---|
@@ -54,6 +44,15 @@ Last updated: 2026-10-19 by Member 3
 | M2.8 Latency report | ✅ | Stress, real models, explain cap 300: detect p50 0.014 ms, explain p50 0.54 ms, e2e/window p50 194 ms, p95 223 ms (was 1,251 ms without the cap). ELEVATED: 100% scored, 18% explained |
 | M2.9 Tests | ✅ | 23 passing (incl. `tests/test_explain_cap.py`) |
 | M2.10 Paper section | ✅ | `paper/pipeline_section.md`: all placeholders filled from real models; new subsection on the 300 explanation cap (stress p95 1,251 → 223 ms); slow-scan rechecked |
+| M1.1 Download CIC-IDS2017 | ✅ | |
+| M1.2 `ml/prepare.py` | ✅ | train 324k / val 69k / test 69k rows, 76 features |
+| M1.3 v0 models + test.parquet | ✅ | Real models on `main`, `pipeline.explainer` check passes (corr 0.995). `data/processed/test.parquet` committed (the one file under `data/` in git), so no Drive link |
+| M1.4 Top-20 feature reduction | ✅ | Val macro F1 0.9901 (76) → 0.9721 (20), −1.8 pts; WebAttack F1 drops most (0.86) |
+| M1.5 `ml/train.py` final | ✅ | One command, ~30 s. rf.joblib 27 MB. IForest kept at 1% FPR by decision: catches 33% of DoS, ~0% of other attacks (a limitation for the paper) |
+| M1.6 `ml/evaluate.py` | ✅ | Test macro F1 LightGBM 0.9719 / RF 0.9856; benign FPR 0.37% / 0.14% |
+| M1.7 `ml/holdout.py` | ✅ | DoS and Bot. Recall LGBM/IForest/either: DoS 4.9/33.0/37.8%, Bot 0/0/0% |
+| M1.8 `ml/benchmark_explain.py` | ✅ | TreeSHAP p50 2.4 ms vs Kernel SHAP ~1.9–2.6 s per flow: ~800–1,100× at the median (range over 3 Kernel SHAP rounds; it varies run to run) |
+| M1.9 Paper sections | ✅ | `paper/sections/03_dataset.md` and `04_models.md` rewritten with real numbers. Results sentences + fixes for `07_results.md` sent to Member 3 |
 
 ## Member 3: Dashboard & Report
 
