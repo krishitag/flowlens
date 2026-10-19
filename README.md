@@ -234,8 +234,8 @@ data/                  gitignored, except data/processed/test.parquet (the repla
 
 | Member | Area |
 |---|---|
-| Member 1 | ML and evaluation (`ml/`, `models/`, reports); later handled by Member 2 |
-| Member 2 | Streaming pipeline and explanations (`pipeline/`, `scenarios/`, `tests/`), and the final ML |
-| Member 3 | Dashboard, paper and demo (`dashboard/`, `paper/`, `README.md`) |
+| Krishita Gupta | Streaming pipeline and explanations (`pipeline/`, `scenarios/`, `tests/`); ML and evaluation on the real dataset (`ml/`, `models/`, reports) |
+| Vedika | First version of the ML scripts; paper and slides with Krish |
+| Krish Singh | Dashboard, paper, slides and demo (`dashboard/`, `paper/`); paper and slides with Vedika |
 
 Dataset: [CIC-IDS2017](https://www.unb.ca/cic/datasets/ids-2017.html), Canadian Institute for Cybersecurity, University of New Brunswick.
