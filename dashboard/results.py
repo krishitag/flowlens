@@ -54,7 +54,7 @@ def fmt(v, pct=False):
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return str(v)
     if pct:
-        return f"{100 * v:.1f}%"
+        return f"{100 * v:.2f}%" if 0 < v < 0.01 else f"{100 * v:.1f}%"  # 0.37%, not 0.4%
     if isinstance(v, int):
         return f"{v:,}"
     return f"{v:,.3f}" if abs(v) < 100 else f"{v:,.1f}"
@@ -133,7 +133,11 @@ def shap_benchmark():
     base_t, base_k = tree_p50 or tree_mean, kern_p50 or kern_mean
 
     tiles = []
-    if base_t and base_k:
+    span = data.get("speedup_p50_range")  # Kernel SHAP timing varies run to run: show the range when given
+    if isinstance(span, list) and len(span) == 2:
+        lo, hi = math.floor(span[0] / 100) * 100, math.ceil(span[1] / 100) * 100
+        tiles.append(ui.tile("Speed-up (median)", f"{lo:,}–{hi:,}×", data.get("speedup_note", "range over runs")))
+    elif base_t and base_k:
         tiles.append(ui.tile("Speed-up (median)", f"{base_k / base_t:,.0f}×", "Kernel SHAP time ÷ TreeSHAP time"))
     tiles += [
         ui.tile("TreeSHAP p50 / p95", f"{fmt(tree_p50)} ms", f"p95 {fmt(tree_p95)} ms"),

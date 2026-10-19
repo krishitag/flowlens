@@ -2,12 +2,12 @@
 
 # FlowLens: Explainable Real-Time Network Anomaly Detection with TreeSHAP and Two-Tier Monitoring
 
-[Author 1] · [Author 2] · [Author 3]
+Vedika · Krishita Gupta · Krish Singh
 School of Computer Science and Engineering, Vellore Institute of Technology
 
 ## Abstract
 
-Network monitoring tools usually separate traffic visibility from security alerting. When a machine-learning detector raises an alert, the analyst receives a label but no reason. Explainable intrusion detection work commonly attaches SHAP explanations to such alerts, but mostly offline and with Kernel SHAP, a model-agnostic estimator that is far too slow to run per connection on live traffic. We argue that per-flow explanations are cheap enough for real-time monitoring when two design choices are combined: tree-based detectors explained with TreeSHAP, which computes exact Shapley values in polynomial time, and a two-tier architecture that runs full scoring and explanation only when traffic is abnormal. We implement this design as FlowLens, which replays labelled CIC-IDS2017 flows as a one-second-window stream. An EWMA monitor switches between NORMAL and ELEVATED states. LightGBM classifies known attack types, an Isolation Forest flags unseen ones, and TreeSHAP turns the top contributing features into plain-language sentences shown on a live dashboard. LightGBM reaches a macro F1 of [lgbm_macro_f1] with a benign false-positive rate of [lgbm_benign_fpr]. TreeSHAP explains a flow in [tree_p50] ms at the median, against [kernel_p50] ms for Kernel SHAP, a [shap_speedup]× speed-up. End-to-end processing stays at [p95_e2e_ms] ms per one-second window at the 95th percentile under stress load. On the [holdout_class] class, withheld from training, recall was [holdout_lgbm_recall] for LightGBM alone, [holdout_iforest_recall] for the Isolation Forest alone, and [holdout_either_recall] for the two combined. We report the trade-off honestly: low-and-slow attacks that do not change traffic volume are caught only at the sampling rate.
+Network monitoring tools usually separate traffic visibility from security alerting. When a machine-learning detector raises an alert, the analyst receives a label but no reason. Explainable intrusion detection work commonly attaches SHAP explanations to such alerts, but mostly offline and often with Kernel SHAP, a model-agnostic estimator that is far too slow to run per connection on live traffic. We argue that per-flow explanations are cheap enough for real-time monitoring when two design choices are combined: tree-based detectors explained with TreeSHAP, which computes exact Shapley values in polynomial time, and a two-tier architecture that runs full scoring and explanation only when traffic is abnormal. We implement this design as FlowLens, which replays labelled CIC-IDS2017 flows as a one-second-window stream. An EWMA monitor switches between NORMAL and ELEVATED states. LightGBM classifies known attack types, an Isolation Forest trained only on benign traffic serves as the detector for unseen ones, and TreeSHAP turns the top contributing features into plain-language sentences shown on a live dashboard. On the test split, LightGBM reaches a macro F1 of 0.972 with a benign false-positive rate of 0.37%. TreeSHAP explains a flow in 2.426 ms at the median, against 2,616.5 ms for Kernel SHAP, a ~800–1,100× speed-up. With at most 300 explanations per window, end-to-end processing takes 223.4 ms per one-second window at the 95th percentile under stress load. Unseen attacks remain the weak point: with DoS withheld from training, LightGBM alone caught 4.9% of its flows, the Isolation Forest 33.0% and the two together 37.8%, and with Bot withheld neither detector caught any. Low-and-slow attacks that do not change traffic volume are caught only at the sampling rate.
 
 **Keywords:** intrusion detection, explainable AI, SHAP, TreeSHAP, LightGBM, Isolation Forest, real-time monitoring, CIC-IDS2017
 
@@ -26,7 +26,7 @@ We demonstrate this with measurements rather than assertions.
 
 ### Contributions
 
-- **FlowLens**, an end-to-end streaming system that replays labelled CIC-IDS2017 flows in real time, detects known attacks with LightGBM and unknown ones with an Isolation Forest, explains every alert with TreeSHAP, and presents the result on a live dashboard.
+- **FlowLens**, an end-to-end streaming system that replays labelled CIC-IDS2017 flows in real time, detects known attacks with LightGBM and screens for unknown ones with an Isolation Forest trained on benign traffic, explains alerts with TreeSHAP, and presents the result on a live dashboard.
 - **A latency study** of detection and explanation per flow, including a direct TreeSHAP versus Kernel SHAP comparison on the same model and flows.
 - **A leave-one-attack-out evaluation** that measures how the system behaves on an attack type the classifier never saw during training.
 - **A measurement of the compute saved by tiering**, as the share of flows scored and explained in NORMAL versus ELEVATED states.
@@ -38,24 +38,28 @@ We demonstrate this with measurements rather than assertions.
 | "SHAP is too slow, so we avoid it" | TreeSHAP on tree models, benchmarked against Kernel SHAP | TreeSHAP is fast; the slow variant is Kernel SHAP |
 | Custom Python traffic simulator | Replay of real labelled CIC-IDS2017 flows as a live stream | Real traffic features and labels, less code, no artificially easy attacks |
 | "Predictive" framework | Removed | Nothing in the system predicts future traffic |
-| Random Forest *or* Isolation Forest | LightGBM (supervised, attack type) *and* Isolation Forest (unsupervised, unseen attacks); Random Forest as a baseline | The two models do different jobs and together cover known and unknown attacks |
+| Random Forest *or* Isolation Forest | LightGBM (supervised, attack type) *and* Isolation Forest (unsupervised, unseen attacks); Random Forest as a baseline | The two models do different jobs: known and unseen attacks |
 | "Tested on realistic datasets" | CIC-IDS2017 with a leave-one-attack-out test | Named and reproducible; the holdout shows behaviour on unseen attacks |
 | Analyst usability metric | Removed | Not measurable within the project's scope |
 
 ## Related Work
 
 
-[Review 1 literature review: paste here]
+### Interpretability in network intrusion detection
+
+Machine learning has long promised to detect attacks that signature rules miss, but it has seen limited use in operational networks. Sommer and Paxson [10] attribute this partly to a *semantic gap*: an operator cannot act on an alert without understanding why the model raised it. Arp et al. [11] identify spurious correlations, where a model learns artefacts of the dataset rather than the attack, as a common pitfall of machine learning in security, and recommend explanation methods to detect them. Explanations therefore serve two readers: the analyst triaging an alert, and the researcher checking that the model learned something real.
+
+Local explanation methods attribute a single prediction to its input features. LIME [7] fits a simple surrogate model around the instance being explained; SHAP [2] attributes the prediction with Shapley values from cooperative game theory. Both have been applied to intrusion detection. Wang et al. [8] use SHAP to explain an intrusion detection system's decisions both locally, per connection, and globally, per attack type. Mane and Rao [9] compare several explanation methods, including SHAP and LIME, on a neural-network intrusion detector. Both studies compute explanations offline on a benchmark dataset; neither measures what explanation costs at streaming rates, which is the question this work addresses.
 
 ### Shapley-value explanations and their cost
 
 SHAP [2] unifies several local explanation methods under Shapley values: each feature's contribution is its average marginal effect on the model output over all subsets of the other features. Computing this exactly is exponential in the number of features, so practical methods approximate or exploit model structure. **Kernel SHAP** is model-agnostic. It estimates Shapley values with a weighted linear regression over many perturbed samples, replacing "missing" features with values from a background dataset. Every explanation therefore requires many model evaluations, which makes it slow and its cost grows with the background size. **TreeSHAP** [3] instead follows the structure of decision trees and computes *exact* Shapley values for tree ensembles in time polynomial in tree depth and size, with no sampling.
 
-Much of the explainable intrusion detection literature we reviewed uses Kernel SHAP or applies SHAP only offline, to analyse a trained model after evaluation. In the first review we concluded that "SHAP is too slow" for live use. That conclusion holds for Kernel SHAP but not for TreeSHAP. This version tests the distinction directly by timing both explainers on the same model and flows (see Results).
+In the first review we concluded that "SHAP is too slow" for live use. That conclusion holds for Kernel SHAP but not for TreeSHAP. This version tests the distinction directly by timing both explainers on the same model and flows (see Results).
 
 ### Detectors
 
-LightGBM [4] is a gradient-boosted decision tree library that grows trees leaf-wise with histogram-based splits. It trains and predicts quickly on tabular data and is directly supported by TreeSHAP. Isolation Forest [5] detects anomalies by randomly partitioning the feature space: anomalous points are isolated in fewer splits, so a short average path length signals an anomaly. Because it is trained only on benign traffic, it can flag attacks that a supervised classifier has never seen. As an ensemble of trees, it is also explainable with TreeSHAP.
+LightGBM [4] is a gradient-boosted decision tree library that grows trees leaf-wise with histogram-based splits. It trains and predicts quickly on tabular data and is directly supported by TreeSHAP. Isolation Forest [5] detects anomalies by randomly partitioning the feature space: anomalous points are isolated in fewer splits, so a short average path length signals an anomaly. Because it is trained only on benign traffic, it can in principle flag attacks that a supervised classifier has never seen. As an ensemble of trees, it is also explainable with TreeSHAP.
 
 ### Dataset
 
@@ -63,29 +67,46 @@ CIC-IDS2017 [1] contains five days of benign and attack traffic generated in a c
 
 ## Dataset and Preprocessing
 
+We use the MachineLearningCSV release of CIC-IDS2017 [1]: eight CSV files, one per capture session, with 2,830,743 labelled flows. Each flow has 78 flow features computed by CICFlowMeter and a `Label` column. Preprocessing (`ml/prepare.py`) runs in these steps:
 
-We use the MachineLearningCSV release of CIC-IDS2017 [1], one CSV file per capture day with flow features and a `Label` column. Preprocessing (`ml/prepare.py`) runs in these steps:
+1. **Cleaning.** Strip whitespace from column names and drop the duplicated `Fwd Header Length` column. Replace ±∞ with missing values and drop those rows (2,867 flows, all with undefined `Flow Bytes/s` and `Flow Packets/s` rates). Then drop exact duplicate rows: 329,896 flows (11.7%) are exact copies of another flow. Deduplicating *before* splitting matters: otherwise identical flows land in both the training and test sets and inflate accuracy.
+2. **Label grouping.** Attack labels are grouped into six classes plus BENIGN: **DoS** (Hulk, GoldenEye, slowloris, Slowhttptest), **DDoS**, **PortScan**, **BruteForce** (FTP-Patator, SSH-Patator), **WebAttack** (Brute Force, XSS and SQL Injection) and **Bot**. Infiltration (36 flows) and Heartbleed (11 flows) are dropped because they are too small to train or evaluate on.
+3. **Leakage control.** `Destination Port` is kept as `dst_port` for display on the dashboard but is **never** a model feature. The release has no IP addresses, flow identifiers or timestamps, and the script drops them if a variant of the files includes them. These fields identify the testbed's attack hosts rather than describe attack behaviour, and would inflate accuracy. This leaves 76 numeric features.
+4. **Sampling.** Each attack class is capped at 50,000 flows and BENIGN at 300,000, which limits training time and softens the class imbalance (after cleaning, BENIGN outnumbers Bot by more than 1,000 to 1).
+5. **Splitting.** A stratified 70/15/15 split into training, validation and test sets (random seed 42). The validation set is used to compare the full and reduced feature sets and to set the Isolation Forest threshold; the test set is used only for the final results, and is also what the pipeline replays as live traffic.
 
-1. **Cleaning.** Strip whitespace from column names; drop the duplicated `Fwd Header Length` column; replace ±∞ with missing values and drop those rows; drop exact duplicate rows.
-2. **Label grouping.** Attack labels are grouped into six classes plus BENIGN: **DoS** (Hulk, GoldenEye, slowloris, Slowhttptest), **DDoS**, **PortScan**, **BruteForce** (FTP-Patator, SSH-Patator), **WebAttack** (all three web attack labels) and **Bot**. Infiltration and Heartbleed are dropped because they have too few flows to train or evaluate on.
-3. **Leakage control.** `Destination Port` is kept as `dst_port` for display on the dashboard, but is **never** a model feature. Neither are IP addresses, flow identifiers or timestamps. These identify the testbed's attack hosts rather than describe attack behaviour, and would inflate accuracy.
-4. **Sampling.** Each attack class is capped at 50,000 flows and BENIGN at 300,000, to limit training time and soften class imbalance.
-5. **Splitting.** A stratified 70/15/15 split into training, validation and test sets. The test split is what the pipeline replays as live traffic.
+After cleaning, 2,497,933 flows remain. After sampling, 463,241 flows are split as below.
 
-After preprocessing, the dataset has [n_total] flows. Per-class counts are in Table [table_class_counts].
+**Flows per class** after cleaning, and in each split after sampling.
 
-[table: class counts per split, from ml/prepare.py output]
+| Class | After cleaning | Train | Validation | Test |
+|---|---:|---:|---:|---:|
+| BENIGN | 2,072,254 | 209,999 | 45,000 | 45,001 |
+| DoS | 193,730 | 35,000 | 7,500 | 7,500 |
+| DDoS | 128,014 | 35,000 | 7,500 | 7,500 |
+| PortScan | 90,694 | 35,000 | 7,500 | 7,500 |
+| BruteForce | 9,150 | 6,405 | 1,372 | 1,373 |
+| WebAttack | 2,143 | 1,500 | 322 | 321 |
+| Bot | 1,948 | 1,364 | 292 | 292 |
+| **Total** | **2,497,933** | **324,268** | **69,486** | **69,487** |
+
+WebAttack and Bot remain small even after capping the large classes: the test set holds only 321 and 292 of their flows, so their per-class scores are the least stable.
 
 ## Models
 
+All models are trained by one command (`python ml/train.py`, about 30 seconds on a laptop) with fixed random seeds.
 
-**LightGBM classifier.** A multiclass LightGBM model (about 200 trees, `class_weight='balanced'`) predicts one of the seven classes. To keep inference fast and explanations readable, we first train on all features, rank them by gain importance, and retrain on the top 20. The reduced model is kept if its macro F1 stays within about one to two points of the full model. Explanations are therefore always phrased in terms of at most 20 features.
+**LightGBM classifier.** A multiclass LightGBM model with 200 trees and otherwise default parameters predicts one of the seven classes. Classes are weighted inversely to their frequency (`class_weight='balanced'`), because without weighting the model barely learned the rare classes: validation macro F1 fell to 0.52. To keep inference fast and explanations readable, we first train on all 76 features, rank them by gain importance, and retrain on the top 20. On the validation set the full model reaches a macro F1 of 0.990 and the 20-feature model 0.972, a drop of 1.8 points, which is within the 1–2 points we accepted in exchange for shorter explanations. The 20-feature model is the one used everywhere else. Its features are, in order of importance:
 
-**Isolation Forest.** An Isolation Forest with 100 trees is trained on benign training flows only. Its anomaly score is `score_samples`, where lower means more anomalous. The decision threshold is set on the benign validation split to give about 1% false positives. Because it never sees attack labels, it serves as the detector for attack types missing from the classifier's training data.
+`Init_Win_bytes_backward`, `Flow Duration`, `Bwd Header Length`, `Total Length of Bwd Packets`, `Bwd Packet Length Min`, `Bwd IAT Min`, `Idle Min`, `PSH Flag Count`, `Fwd Header Length`, `min_seg_size_forward`, `Fwd PSH Flags`, `Total Backward Packets`, `Init_Win_bytes_forward`, `Flow IAT Max`, `Idle Mean`, `Total Length of Fwd Packets`, `Bwd Packet Length Std`, `act_data_pkt_fwd`, `Packet Length Std`, `Fwd Packet Length Std`.
 
-**Random Forest baseline.** A 100-tree Random Forest on the same features provides a baseline for the classifier's accuracy. It is not used in the streaming pipeline.
+Most of the loss falls on WebAttack, where the 20-feature model confuses some benign web flows with attacks. A softer class weighting (the square root of the balanced weights) gave the same result, so we kept the balanced weights.
 
-**Exported artefacts.** Training writes the models, the ordered feature list, the class-label map, the Isolation Forest threshold, and per-feature benign baselines (101 percentiles plus the 99.9th) to `models/`. The pipeline loads these at start-up. The baselines are what turn SHAP contributions into sentences such as "above 99.9% of normal flows".
+**Isolation Forest.** An Isolation Forest with 100 trees (256 samples per tree, the default) is trained on the 209,999 benign training flows only, using the same 20 features. Its anomaly score is `score_samples`, where lower means more anomalous. The decision threshold is the 1st percentile of the scores of benign validation flows (−0.665), so about 1% of benign flows are flagged; on the test set the rate is 0.93%. Because it never sees attack labels, it is the detector intended for attack types missing from the classifier's training data.
+
+**Random Forest baseline.** A 100-tree Random Forest on the same 20 features provides a baseline for the classifier's accuracy. It is not used in the streaming pipeline.
+
+**Exported artefacts.** Training writes the models, the ordered feature list, the class-label map, the Isolation Forest threshold, and per-feature benign baselines (101 percentiles plus the 99.9th, from benign training flows) to `models/`. The pipeline loads these at start-up. The baselines are what turn SHAP contributions into sentences such as "above 99.9% of normal flows".
 
 ## Streaming Pipeline and Explanation Generation
 
@@ -132,7 +153,7 @@ Explanations use `shap.TreeExplainer`, which computes exact Shapley values for t
 
 #### Isolation Forest sign handling
 
-TreeSHAP explains an Isolation Forest in terms of path length. A short path means a point is easy to isolate, and therefore anomalous. A negative SHAP value thus pushes a flow toward "anomalous". The explainer negates these values, so that for both models a positive contribution means "pushes toward anomalous", and the dashboard can show them on the same scale. To check this sign convention, we sample 500 test flows, sum each flow's raw Isolation Forest SHAP values, and correlate the sums with the model's `score_samples` output, where higher means more normal. A correct sign gives a strong positive correlation. On the final models, the correlation was [iforest_sign_corr].
+TreeSHAP explains an Isolation Forest in terms of path length. A short path means a point is easy to isolate, and therefore anomalous. A negative SHAP value thus pushes a flow toward "anomalous". The explainer negates these values, so that for both models a positive contribution means "pushes toward anomalous", and the dashboard can show them on the same scale. To check this sign convention, we sample 500 test flows, sum each flow's raw Isolation Forest SHAP values, and correlate the sums with the model's `score_samples` output, where higher means more normal. A correct sign gives a strong positive correlation. On the final models, the correlation was 0.995.
 
 #### From contributions to sentences
 
@@ -151,6 +172,12 @@ Unit tests cover each rule with hand-made baselines, including a feature where 6
 
 Each alert stores the three features as JSON, each with its name, value, contribution and percentile, together with the sentences. The dashboard uses these to draw a contribution bar chart for the selected alert.
 
+#### Per-window explanation cap
+
+Explaining every flagged flow does not fit in a one-second window under heavy attack traffic. In the stress scenario below, the ELEVATED state explained 88% of about 1,560 flows per second. At roughly 0.55 ms per flow, that is close to 800 ms of explanation work per window before detection and database writes, and end-to-end latency reached 1,251 ms per window at the 95th percentile, over the 1,000 ms budget.
+
+The pipeline therefore explains at most 300 flagged flows per window (`--explain-cap`, default 300). At about 0.55 ms per flow, 300 explanations keep explanation work around 165 ms per window, well under the 1,000 ms budget. In the demonstration scenario the cap covers every window except the single busiest one (314 alerts), so 99.7% of demo alerts are explained. When a window has more flagged flows than the cap, the most confident ones are explained first: flows flagged by LightGBM (alone or with the Isolation Forest) in order of predicted-class probability, then flows flagged only by the Isolation Forest, most anomalous score first. The remaining flows are still stored as alerts, with their prediction and scores, but with no top features and the explanation "Not explained: per-window explanation budget reached". The `explained` count in `traffic_windows` records only the flows that were actually explained.
+
 ### Latency Evaluation
 
 Latency is measured with a stress scenario of five 20-second segments: benign traffic at 200 flows/s, DoS at 2,000 flows/s with 30% benign flows mixed in, DDoS at 2,000 flows/s, PortScan at 1,000 flows/s, and benign traffic at 200 flows/s. The scenario is replayed with no delay into a temporary database, and four quantities are recorded:
@@ -160,17 +187,19 @@ Latency is measured with a stress scenario of five 20-second segments: benign tr
 - **End-to-end latency per window:** the time from receiving a window to finishing the database writes for it.
 - **Work per state:** the share of flows scored and explained in NORMAL and in ELEVATED windows.
 
-On the final models, detection latency was [p50_detect_ms] ms at the median and [p95_detect_ms] ms at the 95th percentile. Explanation latency was [p50_explain_ms] ms and [p95_explain_ms] ms. End-to-end latency per window was [p50_e2e_ms] ms and [p95_e2e_ms] ms, compared with the window length of 1,000 ms. In NORMAL windows, [pct_scored_normal]% of flows were scored and [pct_explained_normal]% explained. In ELEVATED windows the figures were [pct_scored_elevated]% and [pct_explained_elevated]%.
+On the final models, the stress scenario replayed 108,111 flows in 100 windows, 62 of them ELEVATED. Detection latency was 0.014 ms per flow at the median and 0.019 ms at the 95th percentile. Explanation latency was 0.54 ms and 0.60 ms. This is lower than the 2.4 ms per flow measured for TreeSHAP in the explainer benchmark, because the pipeline explains each window's flows in one batch rather than one call per flow. End-to-end latency per window was 194 ms at the median and 223 ms at the 95th percentile, compared with the window length of 1,000 ms. Without the explanation cap, the same scenario took 627 ms and 1,251 ms.
+
+In NORMAL windows, 9.97% of flows were scored and 2.55% explained. In ELEVATED windows, 100% were scored and 17.95% explained; without the cap, 88.19% were explained. In the demonstration scenario the cap explained 6,533 of 6,550 alerts (99.7%).
 
 ### Limitations
 
-**Low-and-slow attacks.** Tier 1 reacts only to changes in total traffic volume. A scan that adds a few flows per second to normal traffic does not change the window counts enough to trigger ELEVATED. In the slow-scan scenario, 30 seconds of PortScan at about 5 flows/s were mixed into roughly 40 benign flows/s. The system stayed NORMAL for the entire run, and the highest z-score during the scan was 3.41, in a single window. Only the 10% sample was scored, and 15 of the 153 scan flows raised alerts. Such attacks are therefore detected only at the sampling rate. This is the cost of avoiding full scoring and explanation during normal operation.
+**Low-and-slow attacks.** Tier 1 reacts only to changes in total traffic volume. A scan that adds a few flows per second to normal traffic does not change the window counts enough to trigger ELEVATED. In the slow-scan scenario, 30 seconds of PortScan at about 5 flows/s were mixed into roughly 40 benign flows/s. The system stayed NORMAL for the entire run, and the highest z-score during the scan was 3.41, in a single window. Only the 10% sample was scored, and 15 of the 153 scan flows raised alerts, all correctly labelled PortScan. Two benign flows were also flagged, as WebAttack. Such attacks are therefore detected only at the sampling rate. This is the cost of avoiding full scoring and explanation during normal operation.
 
 **Frozen baseline.** Because the baseline is not updated while ELEVATED, the monitor assumes that every period of high traffic eventually ends. A legitimate, lasting increase in traffic, such as a new service or a busy period, would keep the system ELEVATED indefinitely. Every flow would then be scored and explained, removing the savings from tiering, until an operator reset the baseline.
 
-**Volume-only monitoring.** The monitor uses flow counts only. Attacks that change what the traffic looks like without changing how much there is are left entirely to the 10% sample in NORMAL state.
+**Unexplained alerts under heavy load.** When a window has more than 300 flagged flows, the least confident ones are stored without an explanation. Under the stress scenario, most ELEVATED alerts are unexplained. The analyst still sees their predicted class and scores, but not why they were flagged.
 
-**Replayed traffic.** The stream is built by resampling labelled flow records, not by capturing live packets. Latency figures therefore exclude packet capture and flow feature extraction, which a deployed system would also need.
+**Volume-only monitoring.** The monitor uses flow counts only. Attacks that change what the traffic looks like without changing how much there is are left entirely to the 10% sample in NORMAL state.
 
 ## Analyst Dashboard
 
@@ -182,9 +211,9 @@ The dashboard is a Streamlit application that reads the event database once per 
 
 **Alerts.** A table lists the 50 most recent alerts: time, destination port, predicted class and confidence, which model raised the alert (LightGBM, Isolation Forest or both), the ground-truth label and whether the prediction matched it. The ground truth is shown for honesty during the demonstration; a deployed system would not have it. A second panel counts alerts per predicted class and per detecting model.
 
-**Explanations.** Selecting an alert shows its top features as a horizontal bar chart of SHAP contributions toward "anomalous", next to the explanation sentences, which compare each feature's value with the benign distribution. Contributions from LightGBM and the Isolation Forest share one sign convention (positive means "pushes toward anomalous"), so both can be plotted on the same axis. An alert is tagged **low confidence** when both models scored the flow but only one flagged it. The analyst can pin an alert by ID while new alerts continue to arrive, and can pause live updates to discuss a single alert.
+**Explanations.** Selecting an alert shows its top features as a horizontal bar chart of SHAP contributions toward "anomalous", next to the explanation sentences, which compare each feature's value with the benign distribution. Contributions from LightGBM and the Isolation Forest share one sign convention (positive means "pushes toward anomalous"), so both can be plotted on the same axis. An alert is tagged **low confidence** when both models scored the flow but only one flagged it. The analyst can pin an alert by ID, or step through alerts with Previous and Next, while new alerts continue to arrive, and can pause live updates to discuss a single alert. Alerts beyond the per-window explanation cap appear with their prediction and scores and are marked as not explained.
 
-**Operational statistics and results.** A sidebar reports the median and 95th-percentile detection and explanation latency, computed live from the alerts table, and the share of flows scored and explained in each state, from the window table. A separate tab presents the offline results (classification metrics, the leave-one-attack-out study, the TreeSHAP versus Kernel SHAP benchmark and the pipeline latency report), read directly from the JSON reports the other components produce.
+**Operational statistics and results.** A sidebar reports the median and 95th-percentile detection and explanation latency, computed live from the alerts table (explanation latency over explained alerts only), and the share of flows scored and explained in each state, from the window table. A separate tab presents the offline results (classification metrics, the leave-one-attack-out study, the TreeSHAP versus Kernel SHAP benchmark and the pipeline latency report), read directly from the JSON reports the other components produce.
 
 The visual design uses a dark, neutral palette. Colour is reserved for state (NORMAL, ELEVATED, low confidence) and always paired with a text label, so it never carries meaning on its own.
 
@@ -194,20 +223,34 @@ All numbers below are generated by the scripts in `ml/` and `pipeline/` and fill
 
 ### Classification
 
-Table 1 compares LightGBM with the Random Forest baseline on the test split. LightGBM reaches a macro F1 of [lgbm_macro_f1] with a benign false-positive rate of [lgbm_benign_fpr]; the Random Forest reaches [rf_macro_f1] and [rf_benign_fpr].
+Table 1 compares LightGBM with the Random Forest baseline on the test split. LightGBM reaches a macro F1 of 0.972 with a benign false-positive rate of 0.37%; the Random Forest reaches 0.986 and 0.14%.
 
 **Table 1.** Per-class F1 on the test split.
 
-[table:per_class_f1]
+| Class | LightGBM | Random Forest |
+|---|---|---|
+| BENIGN | 0.998 | 0.999 |
+| DoS | 0.998 | 0.998 |
+| DDoS | 0.999 | 0.999 |
+| PortScan | 0.999 | 0.998 |
+| BruteForce | 0.999 | 0.999 |
+| WebAttack | 0.859 | 0.972 |
+| Bot | 0.950 | 0.933 |
 
+WebAttack is the hardest class for LightGBM (F1 0.859): it catches 99% of web attacks, but 98 benign test flows are also labelled WebAttack, so precision is 0.76. The Random Forest handles it better (0.972). Bot (0.950) is the other weak class; these are the two smallest classes, with about 300 test flows each. The confusion matrix is in `reports/figures/confusion_lgbm.png`.
 
 ### Unseen attacks: leave-one-attack-out
 
-To estimate behaviour on an attack type the classifier has never seen, LightGBM is retrained without one attack class, and recall is measured on that class's flows for LightGBM alone, the Isolation Forest alone, and either model (the pipeline's flag rule in the ELEVATED state).
+To estimate behaviour on an attack type the classifier has never seen, LightGBM is retrained without one attack class, and recall is measured on that class's flows for three detectors. *LightGBM alone* counts any non-BENIGN prediction, without the 0.5 probability cutoff the pipeline applies. *Isolation Forest alone* counts flows whose score falls below its threshold. *Either* counts flows caught by at least one of the two.
 
 **Table 2.** Recall on the held-out class.
 
-[table:holdout]
+| Held-out class | LightGBM alone | Isolation Forest alone | Either |
+|---|---|---|---|
+| DoS | 4.9% | 33.0% | 37.8% |
+| Bot | 0.0% | 0.0% | 0.0% |
+
+Once LightGBM has not seen Bot, neither detector catches it: all 292 flows are classified BENIGN and none fall below the Isolation Forest threshold. For DoS, LightGBM alone catches 4.9% (it labels 7,135 of 7,500 flows BENIGN), while the Isolation Forest catches 33.0%, so the two together reach 37.8%. The Isolation Forest adds coverage for volumetric attacks, but not for attacks whose flows look normal.
 
 ### Explanation latency: TreeSHAP versus Kernel SHAP
 
@@ -215,23 +258,33 @@ The headline measurement times both explainers per flow on the same LightGBM mod
 
 **Table 3.** Explanation latency per flow (ms).
 
-[table:shap_benchmark]
+| Explainer | Mean | p50 | p95 | Flows |
+|---|---|---|---|---|
+| TreeSHAP | 2.424 | 2.426 | 2.507 | 200 |
+| Kernel SHAP | 2,618.2 | 2,616.5 | 2,982.1 | 50 |
 
-TreeSHAP's median latency is [tree_p50] ms against [kernel_p50] ms for Kernel SHAP, a speed-up of about [shap_speedup]×. At Kernel SHAP's speed, explaining a single one-second window of ELEVATED traffic would take far longer than the window itself. At TreeSHAP's speed it fits comfortably. Figure: `reports/figures/shap_latency.png`.
+TreeSHAP's median latency is 2.426 ms per flow against 2,616.5 ms for Kernel SHAP. Kernel SHAP's timing varied from run to run, so we report the speed-up as a range over three Kernel SHAP rounds: ~800–1,100× at the median. At Kernel SHAP's speed a single flow takes longer to explain than the whole one-second window. TreeSHAP, run in one batch per window inside the pipeline, costs about half a millisecond per flow (next section), so hundreds of explanations fit in a window. Figure: `reports/figures/shap_latency.png`.
 
 ### Pipeline latency and the cost of tiering
 
-Under the stress scenario (Section *Latency Evaluation*), detection took [p50_detect_ms] ms per flow at the median ([p95_detect_ms] ms at p95), and explanation [p50_explain_ms] ms ([p95_explain_ms] ms at p95). End-to-end processing of a whole window took [p50_e2e_ms] ms at the median and [p95_e2e_ms] ms at p95, against the window length of 1,000 ms.
+Under the stress scenario (Section *Latency Evaluation*), detection took 0.014 ms per flow at the median (0.019 ms at p95), and explanation 0.543 ms (0.603 ms at p95). End-to-end processing of a whole window took 194.1 ms at the median and 223.4 ms at p95, against the window length of 1,000 ms. This relies on the cap of 300 explanations per window; without it, the same scenario reached 1,251 ms at p95 (Section *Per-window explanation cap*).
 
 **Table 4.** Work done per Tier-1 state under the stress scenario.
 
-[table:tiering]
+| State | Windows | Flows | Scored | Explained |
+|---|---|---|---|---|
+| NORMAL | 38 | 11,138 | 10.0% | 2.5% |
+| ELEVATED | 62 | 96,973 | 100.0% | 17.9% |
 
-In NORMAL windows only about a tenth of flows are scored, and only flagged ones are explained. This is the compute that tiering saves during ordinary operation.
+In NORMAL windows only about a tenth of flows are scored, and 2.5% are explained. This is the compute that tiering saves during ordinary operation. In ELEVATED windows every flow is scored; under this stress load the explanation cap limits explanations to 17.9% of flows. In the demonstration scenario, by contrast, 6,533 of 6,550 alerts (99.7%) were explained.
 
 ## Limitations
 
-**Low-and-slow attacks.** Tier 1 reacts to changes in traffic *volume*. An attack that adds only a few flows per second, such as a slow port scan, never triggers ELEVATED, so its flows are scored only through the 10% sample in the NORMAL state. This is the deliberate cost of tiering, measured in the *Limitations* subsection of the pipeline section with `scenarios/slowscan.json`.
+**Unseen attacks that look normal.** The Isolation Forest is the system's only defence against attack types missing from the classifier's training data, and the leave-one-attack-out study shows its reach is narrow. It added coverage for a volumetric attack (DoS) but caught none of the Bot flows, whose individual flows resemble benign traffic. A deployed system would need further detectors for such attacks, for example on host behaviour over time rather than single flows.
+
+**Low-and-slow attacks.** Tier 1 reacts to changes in traffic *volume*. An attack that adds only a few flows per second, such as a slow port scan, never triggers ELEVATED, so its flows are scored only through the 10% sample in the NORMAL state. This is the deliberate cost of tiering, measured with `scenarios/slowscan.json` in the *Limitations* subsection of the pipeline section.
+
+**Unexplained alerts under heavy load.** The cap of 300 explanations per window leaves the least confident alerts without an explanation when a window is busier than that: 17 of 6,550 alerts in the demonstration scenario, but most ELEVATED alerts under the stress scenario (see the pipeline section's *Limitations*).
 
 **Dataset artefacts.** CIC-IDS2017 was generated in a testbed, and later analyses report labelling errors and flow-construction artefacts in it [6]. Results on this dataset may overstate how well the same models would perform on a real network. We exclude ports, addresses and timestamps from the features to avoid the most obvious shortcuts, but cannot rule out subtler ones.
 
@@ -243,9 +296,9 @@ In NORMAL windows only about a tenth of flows are scored, and only flagged ones 
 
 ## Conclusion
 
-The claim that SHAP is too slow for live intrusion detection is true of Kernel SHAP but not of SHAP in general. With tree-based detectors, TreeSHAP computes exact explanations in about [tree_p50] ms per flow, and a two-tier design limits full scoring and explanation to the periods when traffic is abnormal. Together these make per-flow explanations practical on a live stream. FlowLens combines a supervised classifier for known attacks with an Isolation Forest for unseen ones, explains every alert in plain language, and shows the result on a dashboard that joins traffic visibility and security alerting in one view.
+The claim that SHAP is too slow for live intrusion detection is true of Kernel SHAP but not of SHAP in general. With tree-based detectors, TreeSHAP computes exact explanations in about 2.426 ms per flow, ~800–1,100× faster than Kernel SHAP, and a two-tier design limits full scoring and explanation to the periods when traffic is abnormal. Together with a cap on explanations per window, these keep per-flow explanations within a one-second window even under stress load. FlowLens explains alerts in plain language and shows them on a dashboard that joins traffic visibility and security alerting in one view. Its classifier is accurate on known attacks (macro F1 0.972). Its Isolation Forest, intended for unseen attacks, helps against volumetric ones but misses attacks whose flows look normal.
 
-Future work includes capturing live traffic instead of replaying records, adding volume-independent triggers to Tier 1 so that low-and-slow attacks are caught beyond the sampling rate, and a user study measuring whether the explanations shorten an analyst's triage.
+Future work includes capturing live traffic instead of replaying records, adding volume-independent triggers to Tier 1 so that low-and-slow attacks are caught beyond the sampling rate, stronger detectors for unseen attacks, and a user study measuring whether the explanations shorten an analyst's triage.
 
 ## References
 
@@ -261,3 +314,12 @@ Future work includes capturing live traffic instead of replaying records, adding
 
 [6] G. Engelen, V. Rimmer and W. Joosen, "Troubleshooting an Intrusion Detection Dataset: the CICIDS2017 Case Study," in *Proc. IEEE Security and Privacy Workshops (SPW)*, 2021.
 
+[7] M. T. Ribeiro, S. Singh and C. Guestrin, "'Why Should I Trust You?': Explaining the Predictions of Any Classifier," in *Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining (KDD)*, 2016.
+
+[8] M. Wang, K. Zheng, Y. Yang and X. Wang, "An Explainable Machine Learning Framework for Intrusion Detection Systems," *IEEE Access*, vol. 8, pp. 73127–73141, 2020.
+
+[9] S. Mane and D. Rao, "Explaining Network Intrusion Detection System Using Explainable AI Framework," arXiv:2103.07110, 2021.
+
+[10] R. Sommer and V. Paxson, "Outside the Closed World: On Using Machine Learning for Network Intrusion Detection," in *Proc. IEEE Symposium on Security and Privacy*, 2010.
+
+[11] D. Arp, E. Quiring, F. Pendlebury, A. Warnecke, F. Pierazzi, C. Wressnegger, L. Cavallaro and K. Rieck, "Dos and Don'ts of Machine Learning in Computer Security," in *Proc. 31st USENIX Security Symposium*, 2022.

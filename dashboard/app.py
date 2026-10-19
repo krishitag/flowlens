@@ -331,9 +331,16 @@ def stats_sidebar():
     if lat.empty:
         ui.html(f'<div style="color:{ui.MUTED};font-size:0.8rem">No alerts yet.</div>')
     else:
-        rows = [[name, f"{lat[col].quantile(0.5):.3f}", f"{lat[col].quantile(0.95):.3f}"]
-                for name, col in (("Detect", "detect_ms"), ("Explain", "explain_ms"))]
+        # alerts past the per-window explanation cap are stored with explain_ms = 0: leave them out
+        explained = lat.loc[lat["explain_ms"] > 0, "explain_ms"]
+        rows = [["Detect", f"{lat['detect_ms'].quantile(0.5):.3f}", f"{lat['detect_ms'].quantile(0.95):.3f}"],
+                ["Explain", f"{explained.quantile(0.5):.3f}" if len(explained) else "–",
+                 f"{explained.quantile(0.95):.3f}" if len(explained) else "–"]]
         ui.html(ui.table(rows, ["ms", "p50", "p95"]))
+        skipped = len(lat) - len(explained)
+        if skipped:
+            ui.html(f'<div style="color:{ui.MUTED};font-size:0.72rem;margin-top:4px">{skipped:,} alerts '
+                    "not explained (per-window cap)</div>")
 
     by_state = query("SELECT state, COUNT(*) AS windows, SUM(flows) AS flows, "
                      "SUM(scored) AS scored, SUM(explained) AS explained FROM traffic_windows GROUP BY state")

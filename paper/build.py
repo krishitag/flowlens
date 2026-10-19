@@ -7,6 +7,7 @@ as-is, one heading level down). Each member edits their own source file; re-run 
 to rebuild. Placeholders whose report doesn't exist yet are left as [name] and listed at the end.
 """
 import json
+import math
 import re
 from pathlib import Path
 
@@ -174,11 +175,17 @@ def from_benchmark(values):
                     + [f"{int(n):,}" if n is not None else "–"])
     if rows:
         values["table:shap_benchmark"] = md_table(["Explainer", "Mean", "p50", "p95", "Flows"], rows)
+    # Kernel SHAP timing varies run to run, so prefer the range over rounds: [801, 1080] -> "~800–1,100"
+    span = data.get("speedup_p50_range")
+    if isinstance(span, list) and len(span) == 2:
+        lo, hi = math.floor(span[0] / 100) * 100, math.ceil(span[1] / 100) * 100
+        values["shap_speedup"] = f"~{lo:,}–{hi:,}"
+        return
     t, k = methods.get("tree", {}), methods.get("kernel", {})
     t50 = first(t, "p50", "median", "p50_ms", "median_ms") or first(t, "mean", "mean_ms")
     k50 = first(k, "p50", "median", "p50_ms", "median_ms") or first(k, "mean", "mean_ms")
     if t50 and k50:
-        values["shap_speedup"] = f"{k50 / t50:,.0f}"
+        values["shap_speedup"] = f"~{k50 / t50:,.0f}"
 
 
 # ---------- assemble ----------

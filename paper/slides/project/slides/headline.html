@@ -6,18 +6,18 @@
 <div style="display:flex;gap:32px;align-items:end">
 <div style="flex:1;display:flex;flex-direction:column;gap:12px">
 <p style="font-size:32px;color:#8f8d86">TreeSHAP, median</p>
-<p style="font-size:120px;font-weight:700;letter-spacing:-3px;line-height:1">[__] ms</p>
+<p style="font-size:96px;font-weight:700;letter-spacing:-2px;line-height:1">2.4 ms</p>
 </div>
 <div style="flex:1;display:flex;flex-direction:column;gap:12px">
 <p style="font-size:32px;color:#8f8d86">Kernel SHAP, median</p>
-<p style="font-size:120px;font-weight:700;letter-spacing:-3px;line-height:1;color:#8f8d86">[__] ms</p>
+<p style="font-size:96px;font-weight:700;letter-spacing:-2px;line-height:1;color:#8f8d86">2.6 s</p>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:12px;border-left:2px solid #b4f23c;padding:0 0 0 40px">
-<p style="font-size:32px;color:#8f8d86">Speed-up</p>
-<p style="font-size:120px;font-weight:700;letter-spacing:-3px;line-height:1;color:#b4f23c">[__]×</p>
+<div style="flex:1.5;display:flex;flex-direction:column;gap:12px;border-left:2px solid #b4f23c;padding:0 0 0 40px">
+<p style="font-size:32px;color:#8f8d86">Speed-up, across 3 runs</p>
+<p style="font-size:96px;font-weight:700;letter-spacing:-2px;line-height:1;color:#b4f23c">800–1,100×</p>
 </div>
 </div>
-<p style="font-size:24px;color:#8f8d86;line-height:1.4;width:1600px">Same LightGBM model. TreeSHAP on 200 flagged test flows; Kernel SHAP on 50 flows with 100 benign background samples. Source: reports/explain_benchmark.json</p>
+<p style="font-size:24px;color:#8f8d86;line-height:1.4;width:1600px">Same LightGBM model. TreeSHAP on 200 flagged test flows (p95 2.5 ms); Kernel SHAP on 50 flows with 100 benign background samples (p95 3.0 s). Kernel SHAP's time varies run to run, so the speed-up is a range.</p>
 <p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 09</p>
-<aside>This is the core claim, measured. Fill the three numbers from reports/explain_benchmark.json (the dashboard's Results tab shows them). Point out that one second of ELEVATED traffic can hold hundreds of flows: at Kernel SHAP speed, explaining them would take far longer than the window.</aside>
+<aside>This is the core claim, measured. One flow takes Kernel SHAP about 2.6 seconds, longer than the whole one-second window. TreeSHAP takes 2.4 ms per flow, and in the pipeline, batched per window, about 0.55 ms. Source: reports/explain_benchmark.json.</aside>
 </section>

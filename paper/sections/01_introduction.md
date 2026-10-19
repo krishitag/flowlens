@@ -13,7 +13,7 @@ We demonstrate this with measurements rather than assertions.
 
 ### Contributions
 
-- **FlowLens**, an end-to-end streaming system that replays labelled CIC-IDS2017 flows in real time, detects known attacks with LightGBM and unknown ones with an Isolation Forest, explains every alert with TreeSHAP, and presents the result on a live dashboard.
+- **FlowLens**, an end-to-end streaming system that replays labelled CIC-IDS2017 flows in real time, detects known attacks with LightGBM and screens for unknown ones with an Isolation Forest trained on benign traffic, explains alerts with TreeSHAP, and presents the result on a live dashboard.
 - **A latency study** of detection and explanation per flow, including a direct TreeSHAP versus Kernel SHAP comparison on the same model and flows.
 - **A leave-one-attack-out evaluation** that measures how the system behaves on an attack type the classifier never saw during training.
 - **A measurement of the compute saved by tiering**, as the share of flows scored and explained in NORMAL versus ELEVATED states.
@@ -25,6 +25,6 @@ We demonstrate this with measurements rather than assertions.
 | "SHAP is too slow, so we avoid it" | TreeSHAP on tree models, benchmarked against Kernel SHAP | TreeSHAP is fast; the slow variant is Kernel SHAP |
 | Custom Python traffic simulator | Replay of real labelled CIC-IDS2017 flows as a live stream | Real traffic features and labels, less code, no artificially easy attacks |
 | "Predictive" framework | Removed | Nothing in the system predicts future traffic |
-| Random Forest *or* Isolation Forest | LightGBM (supervised, attack type) *and* Isolation Forest (unsupervised, unseen attacks); Random Forest as a baseline | The two models do different jobs and together cover known and unknown attacks |
+| Random Forest *or* Isolation Forest | LightGBM (supervised, attack type) *and* Isolation Forest (unsupervised, unseen attacks); Random Forest as a baseline | The two models do different jobs: known and unseen attacks |
 | "Tested on realistic datasets" | CIC-IDS2017 with a leave-one-attack-out test | Named and reproducible; the holdout shows behaviour on unseen attacks |
 | Analyst usability metric | Removed | Not measurable within the project's scope |
