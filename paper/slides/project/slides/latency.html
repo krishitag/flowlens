@@ -1,31 +1,31 @@
 <section id="latency" data-transition="fade" style="background:#121211;color:#ededeb;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="display:flex;flex-direction:column;gap:16px">
-<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Pipeline · stress scenario</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;text-transform:uppercase;color:#b4f23c">Pipeline · stress scenario, 108,111 flows</p>
 <h2 style="font-size:64px;font-weight:600;line-height:1.15">Fits inside the one-second window</h2>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:24px">
 <div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:40px">
 <p style="font-size:24px;color:#8f8d86">Detect per flow · p50</p>
-<p style="font-size:72px;font-weight:700;line-height:1.1">[__]</p>
-<p style="font-size:24px;color:#8f8d86">ms · p95 [__]</p>
+<p style="font-size:72px;font-weight:700;line-height:1.1">0.014</p>
+<p style="font-size:24px;color:#8f8d86">ms · p95 0.019</p>
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:40px">
 <p style="font-size:24px;color:#8f8d86">Explain per flow · p50</p>
-<p style="font-size:72px;font-weight:700;line-height:1.1">[__]</p>
-<p style="font-size:24px;color:#8f8d86">ms · p95 [__]</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:40px">
-<p style="font-size:24px;color:#8f8d86">Whole window · p95</p>
-<p style="font-size:72px;font-weight:700;line-height:1.1">[__]</p>
-<p style="font-size:24px;color:#8f8d86">ms of a 1,000 ms budget</p>
+<p style="font-size:72px;font-weight:700;line-height:1.1">0.54</p>
+<p style="font-size:24px;color:#8f8d86">ms · p95 0.60</p>
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #b4f23c;border-radius:16px;padding:40px">
+<p style="font-size:24px;color:#8f8d86">Whole window · p95</p>
+<p style="font-size:72px;font-weight:700;line-height:1.1">223</p>
+<p style="font-size:24px;color:#8f8d86">ms of a 1,000 ms budget</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#1a1a19;border:1px solid #2e2e2c;border-radius:16px;padding:40px">
 <p style="font-size:24px;color:#8f8d86">Flows scored</p>
-<p style="font-size:72px;font-weight:700;line-height:1.1">[__]%</p>
+<p style="font-size:72px;font-weight:700;line-height:1.1">10%</p>
 <p style="font-size:24px;color:#8f8d86">NORMAL, vs 100% ELEVATED</p>
 </div>
 </div>
-<p style="font-size:32px;color:#c3c2b7;line-height:1.4;width:1600px">Tiering is the saving: in NORMAL windows only a tenth of flows are scored, and only flagged flows are explained.</p>
+<p style="font-size:32px;color:#c3c2b7;line-height:1.4;width:1600px">This needs a cap of 300 explanations per window: without it the window p95 was 1,251 ms. In the live demo the cap still explained 6,533 of 6,550 alerts (99.7%).</p>
 <p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8f8d86">FlowLens · Review 2 · 11</p>
-<aside>Fill from reports/pipeline_latency.json (python -m pipeline.latency_report --scenario scenarios/stress.json). Stress runs 2,000 flows per second during the attack segments, replayed as fast as possible. The window figure includes detection, explanation and the database writes.</aside>
+<aside>Stress runs 2,000 flows per second during the attack segments, replayed as fast as possible. The window figure includes detection, explanation and the database writes. Batched per window, TreeSHAP costs about 0.55 ms per flow, less than the 2.4 ms per single call. When a window has more than 300 flagged flows, the most confident are explained first; the rest are stored as alerts marked "not explained". Source: reports/pipeline_latency.json.</aside>
 </section>

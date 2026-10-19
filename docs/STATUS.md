@@ -4,7 +4,7 @@ The one place to track progress. **Update your own rows whenever you push a task
 
 Legend: ✅ done · 🟡 in progress / partly done · ⏳ waiting on someone · ⬜ not started
 
-Last updated: 2026-10-15 by Member 2 (also handling ML)
+Last updated: 2026-10-19 by Member 3
 
 ---
 
@@ -14,16 +14,14 @@ Last updated: 2026-10-15 by Member 2 (also handling ML)
 |---|---|---|
 | **A** (~Hour 3) | M1 v0 models + test.parquet · pipeline runs · dashboard shows data | ✅ Real models + `test.parquet` on `main` (`git pull`) · pipeline runs on them · dashboard ✅ |
 | **B** (end of Day 1) | Full end-to-end run on v0 models with live dashboard | ✅ `pipeline.run` demo works end to end on real models (ELEVATED during DoS + PortScan) |
-| **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | 🟡 All `reports/*.json` + figures on `main` from real models · Member 3 to confirm the results tab |
+| **C** (Day 2 midday) | All `reports/*.json` pushed · results tab shows real numbers | ✅ All `reports/*.json` + figures on `main` from real models · results tab confirmed by Member 3 |
 | Code freeze | | ⬜ |
 
 ## Blockers
 
 | Blocked task | Waiting on | Owner of blocker |
 |---|---|---|
-| M3.4 sidebar explain p50/p95 | With the explanation cap, unexplained alerts have `explain_ms = 0`; the sidebar should use `WHERE explain_ms > 0` (rare in demo: 17 of 6,550) | Member 3 |
 | M3.5 results tab | Nothing: real `reports/*.json` are on `main` | — |
-| M3.8 README: rerunning ML | To rerun holdout/benchmark, download CIC-IDS2017 MachineLearningCVE from Kaggle into data/raw/ and run python ml/prepare.py | Member 3 |
 | M3.6/M3.7 result numbers, M3.9 video | Nothing from Member 2 left: models, reports, M1.9 sections on `main`. README: no Drive link needed, `test.parquet` comes with `git pull` | — |
 
 ---
@@ -64,12 +62,12 @@ Last updated: 2026-10-15 by Member 2 (also handling ML)
 | M3.1 `dashboard/fake_events.py` | ✅ | Skipped: not needed, built against a real `events.db` from `make_fake_models.py` + `pipeline.run` |
 | M3.2 `dashboard/app.py` layout | ✅ | Black/grey theme (`.streamlit/config.toml`), status strip, 5 KPI tiles, flows + z-score panels with thresholds and ELEVATED bands, alerts-by-type, last-50 table; 1 s refresh; survives DB recreate |
 | M3.3 Explanation panel | ✅ | Alert card + SHAP bars + parsed reasons + low-confidence tag; neon Prev/Next/Latest stepping; Pause/Resume button for presenting |
-| M3.4 Stats sidebar | ✅ | Detect/explain p50/p95, % scored/explained per state, `run_meta` when the run ends |
-| M3.5 Results tab | 🟡 | Built and tested with sample JSON: SHAP speed-up, per-model metrics, per-class F1, holdout, pipeline latency. Tolerant parsing; confirm against Member 1's real reports |
-| M3.6 Paper | 🟡 | Draft assembled: `paper/sections/*` + `python paper/build.py` → `paper/paper.md` (merges M2's section, fills numbers from `reports/`). Open: Review 1 lit review, M1 sections (drafts in place), author names |
-| M3.7 Review 2 slides | 🟡 | 13-slide deck (source in `paper/slides/`, hosted deck shared by Member 3). Result slides have `[__]` placeholders until reports land |
-| M3.8 README | 🟡 | Full rewrite: overview, quick start per OS, dashboard guide, evaluation, troubleshooting. Only the Drive data link is left (Member 1) |
-| M3.9 Backup demo video | ⏳ | Run-of-show + recording steps in `paper/demo_script.md`; record once real models are in |
+| M3.4 Stats sidebar | ✅ | Detect/explain p50/p95 (explain over `explain_ms > 0` only, with a count of cap-skipped alerts), % scored/explained per state, `run_meta` when the run ends |
+| M3.5 Results tab | ✅ | Confirmed on the real `reports/*.json`: speed-up shown as the 800–1,100× range, per-model metrics, per-class F1, DoS/Bot holdout, pipeline latency, figures |
+| M3.6 Paper | ✅ | Final: `python paper/build.py` → `paper/paper.md`, all numbers from `reports/`. Results text, holdout definition and speed-up range per Member 2's notes. Related work written from references [7]–[11] (Review 1 lit review wasn't available). Shareable doc version for export to Word/PDF |
+| M3.7 Review 2 slides | ✅ | 13 slides with final numbers (source `paper/slides/`, hosted deck downloads as PPTX/PDF). Explanation slide uses a real PortScan alert from the demo |
+| M3.8 README | ✅ | Rewritten on `main` (#11, #12): no Drive link needed, retraining steps included |
+| M3.9 Backup demo video | ⬜ | Unblocked: real models are on `main`. Record with `paper/demo_script.md` (run-of-show + recording steps) |
 
 ## Shared
 
