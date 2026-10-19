@@ -10,16 +10,17 @@ Table 1 compares LightGBM with the Random Forest baseline on the test split. Lig
 
 [table:per_class_f1]
 
-<!-- MEMBER 3: one or two sentences on which classes are hardest (typically WebAttack and Bot,
-     the smallest classes) once the numbers are in. Figure: reports/figures/confusion_lgbm.png -->
+WebAttack is the hardest class for LightGBM (F1 0.859): it catches 99% of web attacks, but 98 benign test flows are also labelled WebAttack, so precision is 0.76. The Random Forest handles it better (0.972). Bot (0.950) is the other weak class; these are the two smallest classes, with about 300 test flows each. The confusion matrix is in `reports/figures/confusion_lgbm.png`.
 
 ### Unseen attacks: leave-one-attack-out
 
-To estimate behaviour on an attack type the classifier has never seen, LightGBM is retrained without one attack class, and recall is measured on that class's flows for LightGBM alone, the Isolation Forest alone, and either model (the pipeline's flag rule in the ELEVATED state).
+To estimate behaviour on an attack type the classifier has never seen, LightGBM is retrained without one attack class, and recall is measured on that class's flows for three detectors. *LightGBM alone* counts any non-BENIGN prediction, without the 0.5 probability cutoff the pipeline applies. *Isolation Forest alone* counts flows whose score falls below its threshold. *Either* counts flows caught by at least one of the two.
 
 **Table 2.** Recall on the held-out class.
 
 [table:holdout]
+
+Once LightGBM has not seen Bot, neither detector catches it: all 292 flows are classified BENIGN and none fall below the Isolation Forest threshold. For DoS, LightGBM alone catches 4.9% (it labels 7,135 of 7,500 flows BENIGN), while the Isolation Forest catches 33.0%, so the two together reach 37.8%. The Isolation Forest adds coverage for volumetric attacks, but not for attacks whose flows look normal.
 
 ### Explanation latency: TreeSHAP versus Kernel SHAP
 
@@ -29,14 +30,14 @@ The headline measurement times both explainers per flow on the same LightGBM mod
 
 [table:shap_benchmark]
 
-TreeSHAP's median latency is [tree_p50] ms against [kernel_p50] ms for Kernel SHAP, a speed-up of about [shap_speedup]×. At Kernel SHAP's speed, explaining a single one-second window of ELEVATED traffic would take far longer than the window itself. At TreeSHAP's speed it fits comfortably. Figure: `reports/figures/shap_latency.png`.
+TreeSHAP's median latency is [tree_p50] ms per flow against [kernel_p50] ms for Kernel SHAP. Kernel SHAP's timing varied from run to run, so we report the speed-up as a range over three Kernel SHAP rounds: [shap_speedup]× at the median. At Kernel SHAP's speed a single flow takes longer to explain than the whole one-second window. TreeSHAP, run in one batch per window inside the pipeline, costs about half a millisecond per flow (next section), so hundreds of explanations fit in a window. Figure: `reports/figures/shap_latency.png`.
 
 ### Pipeline latency and the cost of tiering
 
-Under the stress scenario (Section *Latency Evaluation*), detection took [p50_detect_ms] ms per flow at the median ([p95_detect_ms] ms at p95), and explanation [p50_explain_ms] ms ([p95_explain_ms] ms at p95). End-to-end processing of a whole window took [p50_e2e_ms] ms at the median and [p95_e2e_ms] ms at p95, against the window length of 1,000 ms.
+Under the stress scenario (Section *Latency Evaluation*), detection took [p50_detect_ms] ms per flow at the median ([p95_detect_ms] ms at p95), and explanation [p50_explain_ms] ms ([p95_explain_ms] ms at p95). End-to-end processing of a whole window took [p50_e2e_ms] ms at the median and [p95_e2e_ms] ms at p95, against the window length of 1,000 ms. This relies on the cap of 300 explanations per window; without it, the same scenario reached 1,251 ms at p95 (Section *Per-window explanation cap*).
 
 **Table 4.** Work done per Tier-1 state under the stress scenario.
 
 [table:tiering]
 
-In NORMAL windows only about a tenth of flows are scored, and only flagged ones are explained. This is the compute that tiering saves during ordinary operation.
+In NORMAL windows only about a tenth of flows are scored, and [pct_explained_normal]% are explained. This is the compute that tiering saves during ordinary operation. In ELEVATED windows every flow is scored; under this stress load the explanation cap limits explanations to [pct_explained_elevated]% of flows. In the demonstration scenario, by contrast, 6,533 of 6,550 alerts (99.7%) were explained.
