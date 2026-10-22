@@ -1,241 +1,509 @@
 # FlowLens: Review 3 Guide
 
-Prep notes for Review 3: what to say, which files to open, what to run, and how to do the live demo.
+**Course:** Computer Networks (VIT) · **Team:** Krishita Gupta, Krish Singh, Vedika
+
+Read this top to bottom once before the review. Sections 1–3 explain the project from zero. Section 6 is the live demo script. Section 10 is the viva questions.
 
 ---
 
-## 1. What the project is (the 30-second pitch)
+## 1. The project in one paragraph
 
-**FlowLens is an explainable, real-time network intrusion detector.**
+FlowLens watches network traffic, spots attacks, and **tells you why** each one looks like an attack, while the traffic is still arriving. We take real recorded traffic from a public dataset (**CIC-IDS2017**) and replay it as if it were live. Every second, a cheap check decides whether traffic looks normal. If it doesn't, two machine-learning models check every connection, and for each one they flag, a method called **TreeSHAP** names the 3 measurements that pushed the model to flag it. It turns them into plain sentences like *"Flow Duration = 36 (below 92% of normal flows)"*. A live dashboard shows all of it.
 
-It takes real labelled network flows from the **CIC-IDS2017** dataset and replays them as live traffic, one 1-second window at a time. A machine-learning model (LightGBM plus an Isolation Forest) decides whether each flow is an attack. For every alert, the system also says **why**, in plain language, while traffic is still arriving:
+**Why this is hard / why it matters:** normal ML security tools give you a label ("DoS!") with no reason. Research papers that *do* give reasons use a slow method called **Kernel SHAP**, which takes about **2 seconds per connection**, far too slow when hundreds of connections arrive every second. We show the reason can be computed in **2.4 ms**, about **800–1,100× faster**, so explanations can be live.
 
-> `Flow Packets/s = 4,812 (above 99.9% of normal flows)`
+### The one line to memorise
 
-A Streamlit dashboard shows traffic, the system's state (NORMAL or ELEVATED), alerts and their explanations as they happen.
-
-**The problem it solves:** monitoring tools usually separate traffic dashboards from security alerts, and an ML alert normally arrives as a bare label with no reason. Research on explainable intrusion detection uses SHAP to give reasons, but only **offline**, and mostly with **Kernel SHAP**, which takes about 2 seconds per flow. That's far too slow for live traffic.
-
-**Our claim:** per-flow explanations *are* cheap enough for real time if you
-1. use **tree models** and explain them with **TreeSHAP** (exact and fast) instead of Kernel SHAP, and
-2. do the heavy work only when traffic looks abnormal, using a **two-tier design**.
-
-We back this claim with measurements, not assertions.
+> **"FlowLens makes network attack detection explainable in real time, and saves compute by only doing the heavy work when traffic looks abnormal."**
 
 ---
 
-## 2. Novelty: what's new
+## 2. The basics, in simple words
 
-| Point | What to say |
+### 2.1 What is a flow?
+
+A **flow** is one network conversation between two computers: e.g. your laptop opening a connection to a web server, sending some packets, getting some back, and closing. The dataset doesn't store the raw packets; it stores **one row per flow** with ~78 numbers describing it (how long it lasted, how many bytes each way, gaps between packets, TCP flags…), plus a label saying whether it was normal or which attack it was.
+
+### 2.2 What are features?
+
+A **feature** is one measurable detail about a flow that the model looks at. Think of a doctor checking a patient: temperature, heart rate, blood pressure. Those are the doctor's features.
+
+The dataset has 78 features. We kept the **20 most useful** (ranked by LightGBM's own importance score). Fewer features = faster model and explanations a human can read. The models lost almost no accuracy.
+
+The features that matter most in our demo, in plain words:
+
+| Feature (real name) | What it means |
 |---|---|
-| **Real-time explanations** | Most XAI-IDS papers explain offline. We explain every alert live. TreeSHAP takes **2.4 ms** per flow, against **~2–2.6 s** for Kernel SHAP: **~800–1,100× faster** (measured on our models, `reports/explain_benchmark.json`). |
-| **Two-tier compute saving** | Tier 1 is a cheap EWMA monitor on flow rate. In NORMAL state only 10% of flows are scored. Only when traffic is abnormal (ELEVATED) do we score every flow with both models. Under stress: NORMAL scores 10% and explains 2.6% of flows; ELEVATED scores 100% and explains 18%. |
-| **Known and unknown attacks** | LightGBM (supervised) names the attack type. The Isolation Forest (unsupervised, trained only on benign traffic) catches anomalies the classifier never saw. Each alert records which model flagged it (`lgbm`, `iforest`, `both`), and disagreement is shown as **low confidence ⚠**. |
-| **Human-readable reasons** | SHAP values alone mean little to an analyst. We compare each top feature with the **benign percentile distribution** and turn it into a sentence ("above 99.9% of normal flows"). |
-| **Explanation budget** | At most 300 explanations per window, most confident first, so even a flood stays inside the 1-second budget (p95 223 ms per window vs 1,251 ms without the cap). |
-| **Honest evaluation** | A leave-one-attack-out test shows what happens with attacks the model never saw, and we report the cases where it fails (Bot, slow scan). |
+| `Flow Duration` | How long the conversation lasted (microseconds) |
+| `Flow IAT Max` | The longest gap between two packets (IAT = inter-arrival time) |
+| `Total Length of Fwd Packets` | Total bytes the client sent |
+| `Total Length of Bwd Packets` | Total bytes the server sent back |
+| `Total Backward Packets` | Number of packets the server sent back |
+| `Init_Win_bytes_backward` / `_forward` | The TCP window size in the first packet: how much data that side says it's ready to receive |
+| `PSH Flag Count` | Packets with the TCP **PSH** ("deliver this now") flag set |
+| `Idle Min` / `Idle Mean` | How long the connection sat doing nothing |
+| `Fwd Header Length` | Total bytes of headers the client sent |
+| `min_seg_size_forward` | Smallest TCP segment the client sent |
+
+All 20 are in `models/features.json`.
+
+**What we deliberately do NOT use:** destination port, IP addresses, flow ID, timestamps. In this dataset those give away the answer (e.g. every attack came from one attacker IP), so the model would "cheat" and fail on any other network. This is called **data leakage**.
+
+### 2.3 What are the "top 3 features"?
+
+For **each alert**, the 3 features that pushed the model **most** toward calling it an attack. They change from alert to alert, and from attack type to attack type.
+
+Real examples from our demo run (`data/events.db`):
+
+**A DoS alert** (true label DoS, model 99.99% sure):
+```
+Init_Win_bytes_backward = 235 (typical for normal flows, percentile 73)
+Total Length of Bwd Packets = 11,595 (above 95% of normal flows)
+Flow IAT Max = 83,400,000 (above 99% of normal flows)
+```
+*In words:* the connection had an 83-second gap between packets. Our DoS class includes **slowloris / slowhttptest**, which open connections and keep them hanging to tie up the server, so huge gaps are exactly the signature.
+
+**A PortScan alert** (true label PortScan, 99.9% sure):
+```
+Flow Duration = 36 (below 92% of normal flows)
+PSH Flag Count = 1 (same value as about 27% of normal flows)
+Total Length of Fwd Packets = 2 (typical for normal flows, percentile 13)
+```
+*In words:* the connection lasted **36 microseconds** and sent 2 bytes. A port scanner knocks on a port and leaves immediately, so super-short tiny flows are the signature.
+
+Across all 6,550 demo alerts, DoS is mostly explained by `Init_Win_bytes_backward`, `Total Length of Bwd Packets` and `Flow IAT Max`; PortScan by `Flow Duration` and `PSH Flag Count`. **Different attacks → different reasons**, which is what you'd expect if the explanations are real.
+
+**"Why is a 'typical' value in the top 3?"** (good viva question) SHAP measures how much a feature *moved the model's decision*, not how unusual it is alone. A value can be ordinary by itself but matter in combination (e.g. window size 235 together with a huge gap). The percentile text just tells the analyst where the value sits compared with normal traffic.
+
+### 2.4 What is SHAP?
+
+**SHAP** (SHapley Additive exPlanations) comes from game theory. Imagine 20 players (features) winning a prize (the model's score). SHAP fairly splits the prize: how much did each player contribute? Big positive share = pushed hard toward "attack".
+
+- **Kernel SHAP:** works for *any* model by trying lots of combinations and estimating. Slow: **~2–2.6 s per flow**.
+- **TreeSHAP:** works only for *tree models*, but uses the tree structure to get the **exact** answer quickly: **2.4 ms per flow**.
+
+That gap (~800–1,100×) is our headline result, and it's *why* we picked tree models.
+
+### 2.5 The percentile sentence
+
+Each top feature is compared with **normal (benign) traffic**. During training we stored, for each feature, the 0th, 1st, …, 100th percentile of benign flows, plus the 99.9th (`models/baselines.json`). If a value is bigger than 99.9% of benign values, the sentence says *"above 99.9% of normal flows"*. That turns a raw SHAP number into something a human understands.
+
+### 2.6 The two ML models
+
+| Model | Type | In simple words | Its job |
+|---|---|---|---|
+| **LightGBM** | Supervised (learns from labelled examples) | Hundreds of small decision trees, each one fixing the mistakes of the ones before ("gradient boosting") | Says **which** attack: DoS, DDoS, PortScan, BruteForce, WebAttack, Bot, or BENIGN |
+| **Isolation Forest** | Unsupervised (trained on **normal traffic only**) | Randomly splits data; weird points get isolated in very few splits | Says **"this looks unusual"**, even for attacks LightGBM never saw |
+| Random Forest | Supervised | Many independent decision trees that vote | **Baseline only**, to compare against. Not used live |
+
+**Flag rule:** a flow becomes an alert if LightGBM says "attack" with ≥ 50% probability, **or** the Isolation Forest score is past its threshold (set so it falsely flags only ~1% of normal traffic). Each alert records who flagged it: `lgbm`, `iforest` or `both`.
+
+**Low confidence ⚠:** both models looked at the flow but only one flagged it. The dashboard marks these so the analyst knows to double-check.
+
+### 2.7 The two tiers
+
+Think of airport security: everyone walks through a cheap metal detector (Tier 1); only if it beeps do you get the full bag search (Tier 2).
+
+**Tier 1, the quick check (`pipeline/monitor.py`)**
+- Every 1-second window, count the flows.
+- Keep a running average of "normal" flow count using **EWMA** (exponentially weighted moving average: recent windows count more, old ones fade out; alpha = 0.1).
+- Compute a **z-score**: how many standard deviations this window is above normal. z = 3 means "very unusual".
+- **NORMAL → ELEVATED** after **3 windows in a row** with z > 3.
+- **ELEVATED → NORMAL** after **5 calm windows in a row** with z < 2.
+- While ELEVATED, the average stops learning, so a long attack never becomes "the new normal".
+- Different enter/exit rules (3 vs 5, z 3 vs 2) are called **hysteresis**: it stops the state flickering on/off from one noisy window.
+
+**Tier 2, the detailed check (`pipeline/detector.py`)**
+- **NORMAL:** LightGBM checks a random **10%** of flows.
+- **ELEVATED:** LightGBM **and** Isolation Forest check **100%** of flows.
+
+**Then the explainer (`pipeline/explainer.py`)** runs TreeSHAP on flagged flows only, **max 300 per window**, most confident first. Without that cap, a flood of alerts made one window take 1,251 ms (over the 1-second budget); with it, 223 ms.
+
+**Why two tiers?** Scoring and explaining every flow all the time wastes compute. Under our stress test: in NORMAL we scored 10% and explained 2.6% of flows; in ELEVATED, 100% scored and 18% explained.
+
+### 2.8 Attack classes (what each one is)
+
+| Class | What the attacker does |
+|---|---|
+| **DoS** | Overloads one server from one machine (Hulk, GoldenEye, slowloris, slowhttptest) |
+| **DDoS** | Same, from many machines at once |
+| **PortScan** | Knocks on many ports to find which services are open (reconnaissance) |
+| **BruteForce** | Guesses passwords over and over (FTP-Patator, SSH-Patator) |
+| **WebAttack** | Attacks a website: brute-force login, XSS, SQL injection |
+| **Bot** | An infected machine talking to its controller |
+| **BENIGN** | Normal traffic |
+
+We dropped Infiltration and Heartbleed: too few examples to learn from.
+
+### 2.9 Metric words you'll hear
+
+| Word | Meaning |
+|---|---|
+| **Precision** | Of everything we flagged as X, how much really was X |
+| **Recall** | Of all real X, how much we caught |
+| **F1** | One number combining precision and recall (1.0 = perfect) |
+| **Macro F1** | Average F1 over all 7 classes, each class counted equally (so small classes matter) |
+| **False positive rate (FPR)** | % of normal traffic wrongly flagged |
+| **p50 / p95** | Median / 95th percentile time: "95% of windows were faster than this" |
+| **Latency** | How long something takes |
 
 ---
 
-## 3. How it works (architecture)
+## 3. The flow (the pipeline)
 
 ```
 scenario.json ─▶ Replayer ─▶ Tier 1: EWMA monitor ─▶ Tier 2: detector ─▶ Explainer ─▶ SQLite (WAL) ─▶ Dashboard
                  1-s windows   NORMAL / ELEVATED      LightGBM (+ IForest)   TreeSHAP      events.db        Streamlit
 ```
 
-**Offline half (`ml/`, run once):** raw CSVs → clean, dedupe, group labels, 70/15/15 split → train LightGBM, Isolation Forest, Random Forest baseline → evaluation reports.
+| Stage | File | In → Out | What to say about it |
+|---|---|---|---|
+| Prepare data (offline) | `ml/prepare.py` | 8 raw CSVs (~850 MB) → train/val/test parquet | "Cleaned infinities and duplicates, grouped 14 labels into 7 classes, removed port/IP so no leakage, 70/15/15 split." |
+| Train (offline) | `ml/train.py` | train/val → `models/*` | "LightGBM on top 20 features, Isolation Forest on benign only with a 1% FPR threshold, RF baseline, benign percentiles for the sentences." |
+| Replay | `pipeline/replayer.py` | scenario + `test.parquet` → one batch of flows per second | "Real test-set flows, never seen in training, replayed second by second following a script (benign, then DoS, then …)." |
+| Tier 1 | `pipeline/monitor.py` | flow count → NORMAL / ELEVATED | "Cheap EWMA z-score on flow rate, with hysteresis." |
+| Tier 2 | `pipeline/detector.py` | flows + state → flagged flows | "10% sample when NORMAL, everything with both models when ELEVATED." |
+| Explain | `pipeline/explainer.py` | flagged flows → top 3 + sentences | "TreeSHAP built once at startup, top 3 features, compared with benign percentiles, cap 300 per window." |
+| Store | `pipeline/store.py` | results → `data/events.db` | "SQLite in WAL mode so the dashboard can read while the pipeline writes." |
+| Show | `dashboard/app.py` | DB → web page | "Streamlit refreshes every second." |
+| Glue | `pipeline/run.py` | runs all the above every window | "The main loop." |
 
-**Online half (`pipeline/`, every 1-second window):**
-1. **Replay:** sample flows from `test.parquet` according to the scenario (benign stretch, DoS burst, port scan, …).
-2. **Tier 1:** EWMA z-score on flows per window. **ELEVATED** after 3 windows with z > 3; back to **NORMAL** after 5 windows with z < 2. The baseline freezes while ELEVATED, so an attack never becomes the new normal.
-3. **Tier 2:** NORMAL → LightGBM on a random 10%. ELEVATED → LightGBM **and** Isolation Forest on every flow. Flag if LightGBM says attack with p ≥ 0.5, or the IForest score is below its threshold (set for ~1% false positives on benign traffic).
-4. **Explain:** TreeSHAP on flagged flows (cap 300/window), top 3 features → sentences using benign percentiles.
-5. **Store:** one `traffic_windows` row plus a batch of `alerts` rows in SQLite (WAL mode, so the dashboard reads while the pipeline writes).
+**Why replay instead of capturing real packets?** Replayed flows come with ground-truth labels, so we can prove whether each alert is right. The dashboard even shows the true label next to the prediction.
 
-**Classes:** BENIGN, DoS, DDoS, PortScan, BruteForce, WebAttack, Bot.
-**Features:** 20 flow features, chosen by LightGBM importance. Destination port, IP addresses, flow IDs and timestamps are **never** features, because they would leak the answer.
+**Why SQLite + WAL?** The pipeline and dashboard are separate programs. SQLite is just a file, and WAL ("write-ahead log") mode lets one program write while the other reads without locking each other.
 
 ---
 
 ## 4. Tech stack
 
-| Purpose | Tool |
-|---|---|
-| Language | Python 3.11 |
-| Data | pandas, numpy, pyarrow (parquet) |
-| Models | LightGBM (classifier), scikit-learn (Isolation Forest, Random Forest baseline, metrics) |
-| Explanations | `shap.TreeExplainer` (live); `KernelExplainer` only in the benchmark |
-| Storage | joblib (models), SQLite in WAL mode (live events) |
-| Dashboard | Streamlit (auto-refresh every 1 s) + Plotly |
-| Testing | pytest (23 unit tests) |
-| Dataset | CIC-IDS2017 (Canadian Institute for Cybersecurity, UNB) |
-| Collaboration | GitHub, protected `main`, PRs with 1 review |
+| Purpose | Tool | Why |
+|---|---|---|
+| Language | Python 3.11 | ML ecosystem; `shap` works best here |
+| Data | pandas, numpy, pyarrow | Tables; parquet files are small and fast |
+| Main model | LightGBM | Fast, accurate on table data, works with TreeSHAP |
+| Other models | scikit-learn | Isolation Forest, Random Forest, metrics |
+| Explanations | shap | TreeExplainer live; KernelExplainer only for the benchmark |
+| Storage | SQLite (WAL), joblib | Zero-setup database; joblib saves models to disk |
+| Dashboard | Streamlit + Plotly | Live web page in pure Python |
+| Tests | pytest | 23 unit tests |
+| Teamwork | GitHub, protected `main`, PRs | Each member owns folders; contracts frozen in `docs/PLAN.md` |
 
 ---
 
-## 5. Project structure: files worth opening
+## 5. Setup (macOS)
 
-If she asks to see code, open these, in this order:
+You already have this. For a fresh laptop:
 
-| File | What to point at |
-|---|---|
-| [docs/PLAN.md](docs/PLAN.md) | The problem, the claim, what changed since Review 1, contracts between team members |
-| [ml/prepare.py](ml/prepare.py) | Cleaning, deduplication, label grouping, dropping port/IP features (leakage), stratified split |
-| [ml/train.py](ml/train.py) | LightGBM, Isolation Forest (benign only, 1% FPR threshold), RF baseline, top-20 feature selection, benign percentile baselines |
-| [pipeline/run.py](pipeline/run.py) | The main loop: one window → monitor → detect → explain → store |
-| [pipeline/monitor.py](pipeline/monitor.py) | Tier 1: the EWMA z-score state machine (small and easy to explain) |
-| [pipeline/detector.py](pipeline/detector.py) | Tier 2: 10% sampling vs full scoring, the flag rule, `lgbm`/`iforest`/`both` |
-| [pipeline/explainer.py](pipeline/explainer.py) | TreeSHAP built once at startup, top 3 features, percentile sentences, the 300-per-window cap |
-| [contracts/schema.sql](contracts/schema.sql) | The database the pipeline writes and the dashboard reads |
-| [dashboard/app.py](dashboard/app.py) | Live view |
-| [ml/benchmark_explain.py](ml/benchmark_explain.py) | The headline experiment: TreeSHAP vs Kernel SHAP |
-| [reports/](reports/) | All the numbers: `results.json`, `holdout.json`, `explain_benchmark.json`, `pipeline_latency.json`, figures |
-| [paper/paper.md](paper/paper.md) | Full write-up |
-
-Full layout:
-
-```
-contracts/   SQLite schema shared by pipeline and dashboard
-dashboard/   Streamlit app (live view, Results tab, theme)
-docs/        PLAN.md (design), STATUS.md (progress)
-ml/          data prep, training, evaluation, holdout test, SHAP benchmark
-models/      trained models, feature list, labels, IForest threshold, benign baselines
-paper/       paper sections, build script, demo script, slides
-pipeline/    replayer, monitor, detector, explainer, store, run, latency report
-reports/     results JSON + figures
-scenarios/   demo, stress and slowscan traffic scripts
-tests/       unit tests
+```bash
+git clone https://github.com/krishitag/flowlens.git
+cd flowlens
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+brew install libomp          # LightGBM needs this on Mac
 ```
 
----
+The trained models and the test data come with the clone; nothing else to download for the demo.
 
-## 6. Results (all from real CIC-IDS2017 data)
-
-| What | Result |
-|---|---|
-| Explanation time per flow | **TreeSHAP 2.4 ms vs Kernel SHAP ~2–2.6 s → ~800–1,100× faster** |
-| Classification, test set | Macro F1 **0.972** (LightGBM), 0.986 (Random Forest baseline) |
-| False positives on benign | LightGBM flags **0.37%** of benign flows |
-| Per class | DoS, DDoS, PortScan, BruteForce ≥ 0.998 F1. Weak: **WebAttack 0.86**, Bot 0.95 (smallest classes) |
-| Unseen attack: DoS held out of training | **37.8%** still caught (IForest 33%, LightGBM 5%) |
-| Unseen attack: Bot held out | 0% caught |
-| Pipeline under stress (~1,100 flows/s) | **223 ms per 1-second window** at p95, well inside 1,000 ms |
-| Live demo run | 6,550 alerts, **99.7% explained** |
-
-**Why choose LightGBM over RF if RF scores higher?** Single-flow prediction is ~0.34 ms for LightGBM vs ~14 ms for RF, and TreeSHAP is fast on LightGBM's shallower boosted trees. For a live system, latency matters as much as 1.4 F1 points.
-
----
-
-## 7. Advantages
-
-- **Explains every alert in real time**, in plain language, not just a label.
-- **Measured, not claimed:** latency and accuracy numbers come from scripts anyone can rerun.
-- **Saves compute:** in normal traffic only 10% of flows are scored, and only flagged ones are explained.
-- **Covers known and unknown attacks** with a supervised and an unsupervised model together.
-- **Shows confidence:** analysts see which model flagged an alert and when the two disagree.
-- **Bounded latency:** the per-window explanation cap keeps every window inside its 1-second budget.
-- **No leakage:** port, IP, flow ID and timestamps excluded; duplicate rows removed before splitting.
-- **Reproducible:** clone, install, run. Models and the test split come with the repo; fixed random seeds.
-
-## 8. Limitations (say these before she asks)
-
-- **Low-and-slow attacks:** a slow port scan never raises the flow rate enough to trigger ELEVATED, so it's only caught by the 10% sample (~10% of scan flows). This is the trade-off of tiering. `scenarios/slowscan.json` shows it.
-- **Attacks that look normal:** at its 1% FPR threshold the Isolation Forest catches a third of unseen DoS but almost no Bot traffic.
-- **WebAttack is the weakest class** (F1 0.86): only 321 test flows, and they look like normal web traffic.
-- **Replayed, not captured, traffic:** flows come from CSV records, so latency excludes packet capture and feature extraction (CICFlowMeter would add that in a real deployment).
-- **Unexplained alerts under very heavy load:** above 300 flagged flows in one window, the least confident ones are stored without an explanation.
-- **One dataset:** CIC-IDS2017 is from 2017 and one lab network; results may not transfer to other networks without retraining.
-
-**Future work:** live capture with CICFlowMeter, a per-destination monitor to catch slow scans, testing on newer datasets (CIC-IDS2018, UNSW-NB15), analyst feedback loop.
-
----
-
-## 9. Before the review (10 minutes ahead)
-
-From the repo root, in a terminal:
-
+**Before the review (10 minutes ahead):**
 ```bash
 cd ~/Desktop/flowlens
 git checkout main && git pull
 source .venv/bin/activate
-pytest tests/ -q                                                # expect: 23 passed
-python -m pipeline.run --scenario scenarios/demo.json --speed 0  # dry run, ~10 s, ends with 6,550 alerts
 ```
+- Open **two terminals**, both in the repo root, both with `.venv` active.
+- Have the **backup video** open in another window.
+- Turn off notifications. Charge the laptop.
 
-Then:
-1. Open **two terminals**, both in the repo root with `.venv` active.
-2. **Terminal 1:** `streamlit run dashboard/app.py` → open http://localhost:8501, full screen, zoom 110–125%.
-3. Check the **Results** tab shows numbers (if not, click **Reload reports**).
-4. Have the **backup video** open in another window in case anything breaks.
-5. Turn off notifications.
+**If something breaks:**
+
+| Problem | Fix |
+|---|---|
+| Dashboard says "Waiting for the pipeline" | Start the pipeline from the repo root |
+| Dashboard is white instead of dark | Start Streamlit from the repo root |
+| LightGBM import error | `brew install libomp` |
+| Results tab says "not available yet" | Click **Reload reports** |
+| Anything weird during the live demo | Switch to the backup video. Don't debug in front of her |
 
 ---
 
-## 10. Live demo: run of show (~3–4 minutes)
+## 6. The demo, step by step (about 10 minutes)
 
-**Terminal 2, at T = 0:**
+Each step: **command → what you'll see → what it means.**
+
+### 6.1 Tests pass (30 seconds)
+
+```bash
+pytest tests/ -q
+```
+**Expected:** `23 passed` in ~5 seconds (ignore the yellow warnings, they're from the shap library).
+**What it means:** the Tier-1 state machine, the percentile sentences and the explanation cap all behave as designed. Details in section 7.
+
+### 6.2 Start the dashboard (Terminal 1)
+
+```bash
+streamlit run dashboard/app.py
+```
+**Expected:** a browser opens at http://localhost:8501 showing "Waiting for the pipeline". Full screen, zoom 110–125%.
+**What it means:** the dashboard is a separate program; it only reads `data/events.db`.
+
+### 6.3 Start the live run (Terminal 2)
 
 ```bash
 python -m pipeline.run --scenario scenarios/demo.json --speed 1
 ```
+**Expected:** Terminal 2 prints one line per second, like:
+```
+ts=   40  ELEVATED  z=  57.73  flows= 394  scored= 394  alerts= 280  explained= 280
+```
+The script `scenarios/demo.json` is: **benign 30 s → DoS 20 s → benign 20 s → PortScan 15 s → benign 20 s** (105 s total). `--speed 1` = real time.
 
-The scenario is: benign 30 s → DoS 20 s → benign 20 s → PortScan 15 s → benign 20 s (~105 s total).
+**What to say as it runs:**
 
-| Time | On screen | What to say |
+| Time | On screen | Say |
 |---|---|---|
-| 0–30 s | Green **NORMAL**, ~40 flows/s, coverage ~10% | "This is normal traffic. Tier 1 just watches the flow rate. Tier 2 scores only a 10% sample, so we don't pay to score and explain everything." |
-| ~30 s | Flow rate jumps to ~400/s, z-score crosses the red line | "A DoS attack starts. The z-score goes above 3…" |
-| ~32 s | Red **ELEVATED**, shaded band, coverage 100% | "…three windows in a row, so we switch to ELEVATED. Now every flow is scored by LightGBM and the Isolation Forest." |
-| 32–50 s | Alerts table fills, DoS in Alerts-by-type | **Toggle Pause live updates** in the sidebar. Go to *Why was it flagged?*, type a DoS alert ID, walk through the SHAP bars and the sentences: "This is the reason, in plain language, computed in under a millisecond." Point at the **true label** column: "we show ground truth so you can see it's correct." **Untoggle Pause.** |
-| ~50–55 s | Back to **NORMAL** after 5 calm windows | "Attack over. Five calm windows and we drop back to sampling." |
-| 70–85 s | PortScan, ELEVATED again | "A port scan: a different attack, and different features explain it." Show a PortScan alert, ideally one tagged **low confidence ⚠** (the two models disagreed). |
-| ~105 s | **RUN COMPLETE** | Point at the sidebar: detect/explain latency per flow, and % scored/explained per state. "That's the saving from tiering." |
-| After | **Results** tab | TreeSHAP vs Kernel SHAP speed-up first (the headline), then per-class F1, leave-one-attack-out, pipeline latency. |
-| If asked | **How it works** tab | The pipeline and the slow-scan limitation. |
+| 0–30 s | Green **NORMAL**, ~40 flows/s, coverage ~10% | "Normal traffic. Tier 1 only watches the flow rate. Tier 2 scores a 10% sample, so we don't waste compute." |
+| ~30 s | Flows jump to ~400/s, z-score shoots past the red line | "A DoS attack starts. The z-score goes above 3…" |
+| ~32 s | Red **ELEVATED**, shaded band, coverage 100% | "…3 windows in a row, so we go ELEVATED. Now every flow goes through LightGBM **and** Isolation Forest." |
+| 32–50 s | Alerts table fills, Alerts-by-type shows DoS | Go to 6.4 |
+| ~53 s | Back to green **NORMAL** | "Attack's over. 5 calm windows and we drop back to sampling." |
+| ~72–88 s | ELEVATED again, PortScan alerts | "A port scan. Different attack, so different features explain it." Show one PortScan alert (6.4 again) |
+| ~105 s | **RUN COMPLETE** | Point at the sidebar (6.5) |
 
-**If something breaks:** switch to the backup video. Don't debug in front of her.
+### 6.4 Explain one alert (during the DoS part)
+
+1. In the sidebar, switch on **Pause live updates** (freezes the screen).
+2. In **Recent alerts**, pick a DoS row and note its ID.
+3. In **Why was it flagged?**, type the ID.
+4. Walk through the bar chart (each bar = one feature's SHAP push toward "attack") and the 3 sentences.
+5. Point at the **true label** column: "We show ground truth so you can see it's actually right."
+6. If there's a row with **⚠**: "The two models disagreed, so we mark it low confidence."
+7. Switch **Pause** off.
+
+**What to say:** "This is the reason, in plain language, computed in under a millisecond. With Kernel SHAP it would be about 2 seconds for *this one* flow, and we had ~400 flows a second."
+
+### 6.5 Sidebar after the run
+
+**Expected:** detect latency per flow (hundredths of a millisecond), explain latency per flow (~0.5 ms), % scored and explained per state.
+**Numbers from our demo run:** 13,913 flows replayed. In NORMAL, 373 of 3,695 flows scored (**~10%**). In ELEVATED, all 10,218 scored. **6,550 alerts, 6,533 explained (99.7%)**.
+**What it means:** that's the compute saving from tiering, and nearly every alert got its reason.
+
+### 6.6 Results tab
+
+**Show in this order:**
+1. **TreeSHAP vs Kernel SHAP** chart: "2.4 ms vs ~2–2.6 s, ~800–1,100× faster. This is the core claim."
+2. **Per-class F1:** "Macro F1 0.972. DoS, DDoS, PortScan, BruteForce are almost perfect. WebAttack 0.86 is the weakest; it's the smallest class and looks like normal web browsing."
+3. **Leave-one-attack-out:** "We trained without DoS at all, then showed it DoS. LightGBM caught 5%, Isolation Forest 33%, together 37.8%. That's why we keep both models. Bot: 0%. That's a limitation."
+4. **Pipeline latency:** "At ~1,100 flows per second, 95% of windows finished in 223 ms, well inside the 1-second budget."
+
+### 6.7 (Optional) Prove the numbers are re-computable
+
+```bash
+python ml/evaluate.py
+```
+**Expected (~30 s):** per-class F1 for LightGBM and RF, `lgbm: macro F1 0.9719, benign FPR 0.0037`, `rf: macro F1 0.9856`.
+**What it means:** the accuracy numbers come from a script anyone can rerun, not from a slide.
+
+```bash
+python -m pipeline.latency_report --scenario scenarios/stress.json
+```
+**Expected (~1 min):** ~100 windows at ~1,100 flows/s; end-to-end per window p95 ≈ 220 ms; % scored/explained per state.
+**What it means:** the system keeps up with 25× the demo's normal traffic.
+
+> Both rewrite files in `reports/` with tiny timing differences. Afterwards: `git checkout -- reports/`
+
+### 6.8 (Optional) Show the limitation honestly
+
+```bash
+python -m pipeline.run --scenario scenarios/slowscan.json --speed 0
+```
+**Expected (a few seconds):** every line says **NORMAL**; only ~15–17 alerts in total.
+**What it means:** a slow port scan hidden in normal traffic never raises the flow rate enough to trigger ELEVATED, so only the 10% sample catches it. "This is the trade-off of tiering, and we report it instead of hiding it."
+
+### 6.9 (Optional) Show the raw data behind the dashboard
+
+After any run:
+```bash
+sqlite3 data/events.db "SELECT id, true_label, pred_label, source, explanation FROM alerts WHERE pred_label='PortScan' LIMIT 2;"
+```
+**Expected:** alert rows with their real 3-line explanations. The first row may well be a **false alarm** (true label BENIGN, predicted PortScan). That's fine to show: "A normal flow that happened to look like a scan, and the explanation shows why: it was only 39 microseconds long. Our false alarm rate is 0.37%."
+**What it means:** the dashboard isn't faking anything; it's reading this table.
+
+### Don't run during the review
+
+| Command | Why not |
+|---|---|
+| `python ml/train.py` | Overwrites the real models in `models/` |
+| `python tests/make_fake_models.py` | Overwrites models and test data with fake ones |
+| `python ml/benchmark_explain.py` | Takes ~6 minutes. Show `reports/figures/shap_latency.png` instead |
+| `python ml/holdout.py` | Retrains models, slow. Show `reports/holdout.json` instead |
 
 ---
 
-## 11. Extra things you can run to prove it works
+## 7. How the tests work and what they prove
 
-All of these run straight from the repo with what's on your laptop. Run them in Terminal 2 **after** the live demo (each pipeline run resets `data/events.db`).
+We test the parts where a silent bug would make the demo **look** right but **be** wrong: the state machine, the sentence wording, and which alerts get explained under load. 23 tests, all passing.
 
-| To show | Command | What to expect |
+| File | Tests | What they prove |
 |---|---|---|
-| **Unit tests pass** | `pytest tests/ -q` | `23 passed` in ~5 s |
-| **Model accuracy** | `python ml/evaluate.py` | Per-class F1 for LightGBM and RF, macro F1 0.972 / 0.986, benign FPR. Writes `reports/results.json` + figures |
-| **Latency under load** | `python -m pipeline.latency_report --scenario scenarios/stress.json` | ~100 windows at ~1,100 flows/s; e2e p95 ≈ 220 ms per window; % scored/explained by state |
-| **The known limitation** | `python -m pipeline.run --scenario scenarios/slowscan.json --speed 0` | Stays **NORMAL** the whole time; only ~15–17 alerts from the slow scan. Honest weakness of tiering |
-| **The explanation cap matters** | `python -m pipeline.run --scenario scenarios/stress.json --speed 0 --explain-cap 0` vs default | With cap 0 nothing is explained; default 300 keeps the window budget |
-| **Headline benchmark** (slow) | `python ml/benchmark_explain.py` | TreeSHAP vs Kernel SHAP. Takes **~6 minutes**: show the existing `reports/explain_benchmark.json` and `reports/figures/shap_latency.png` instead, and only run it if she insists |
-| **Unseen attacks** (slow) | `python ml/holdout.py` | Retrains without DoS / Bot and reports recall. Show `reports/holdout.json` instead unless asked |
+| `tests/test_monitor.py` | 7 | Tier 1 behaves exactly as designed |
+| `tests/test_explainer.py` | 9 | The percentile sentences are correct |
+| `tests/test_explain_cap.py` | 5 | The 300-per-window cap explains the right alerts |
 
-The three report scripts (`evaluate.py`, `latency_report`, `benchmark_explain.py`) overwrite files in `reports/` with slightly different timings each run. Afterwards run `git checkout -- reports/` so you don't commit timing noise by accident.
+**Example 1: Tier 1 flips after exactly 3 windows** (`tests/test_monitor.py`)
+```python
+def test_sustained_spike_flips_after_3_windows():
+    m = warmed_up()                     # 30 windows of ~40 flows
+    assert states(m, [CALM * 10] * 5) == ["NORMAL", "NORMAL", "ELEVATED", "ELEVATED", "ELEVATED"]
+```
+Feed calm traffic, then 10× traffic for 5 windows. The state must stay NORMAL twice and flip on the **3rd**.
 
-**Don't run** `python ml/train.py` or `tests/make_fake_models.py` during the review: both overwrite the models in `models/`.
+**Example 2: an attack doesn't become the new normal**
+```python
+def test_baseline_not_learned_while_elevated():
+    m = warmed_up()
+    mean_before = m.mean
+    states(m, [CALM * 10] * 50)        # 50 seconds of attack
+    assert m.mean == mean_before       # the "normal" average didn't move
+```
 
-### What the 23 unit tests check
+**All 7 monitor tests:** steady traffic stays NORMAL · sustained spike flips after 3 · back to NORMAL only after 5 calm windows · one spike during recovery resets the calm count · a single spike doesn't flip · nothing flips during warm-up · baseline frozen while ELEVATED.
 
-| File | Checks |
-|---|---|
-| `tests/test_monitor.py` (7) | Steady traffic stays NORMAL; a sustained spike flips to ELEVATED after 3 windows; a single spike doesn't; return to NORMAL only after 5 calm windows; the calm streak resets on a spike; nothing flips during warm-up; the baseline isn't learned while ELEVATED |
-| `tests/test_explainer.py` (9) | Percentile lookup against the benign baselines; "above 99.9%", "below all", "above X%", "below X%" wording; tied zeros and binary flags handled; sentence format |
-| `tests/test_explain_cap.py` (5) | Under the cap everything is explained; over it the most confident LightGBM alerts go first, then IForest-only by lowest score; cap 0 and empty windows work |
+**Explainer tests:** "above 99.9%", "below every normal flow", "above X%", "below X%", "typical, percentile X" all produced at the right values · many tied zeros (common in network data) aren't wrongly called "above"/"below" · on/off flags handled · sentence format is `Name = value (where)`.
+
+**Cap tests:** under 300, everything is explained · over 300, LightGBM alerts go first by confidence, then Isolation-Forest-only by most anomalous · cap 0 and empty windows don't crash.
+
+**Why the tied-zeros test matters:** network data is full of identical values (most flows have 0 PSH flags, for example). A naive percentile lookup would call a 0 "above 60% of normal flows", which is misleading. The explainer says "same value as about X% of normal flows" instead, and the test locks that in.
 
 ---
 
-## 12. Questions she might ask
+## 8. Results (all from real data)
 
-| Question | Answer |
+| What | Result |
 |---|---|
-| Why not deep learning? | Tree models are accurate on tabular flow features, fast, and TreeSHAP gives *exact* SHAP values in milliseconds. Deep models would need slow approximate explainers. |
-| Why both LightGBM and Isolation Forest? | Different jobs: LightGBM names known attacks; IForest is trained only on benign traffic, so it can flag things LightGBM never saw. The holdout test shows this: unseen DoS caught 5% by LightGBM, 33% by IForest. |
-| Is 97% F1 too good, is there leakage? | We excluded destination port, IPs, flow ID and timestamps, and removed duplicate rows before splitting. 0.97 macro F1 is in line with published CIC-IDS2017 results; WebAttack at 0.86 shows it isn't trivially perfect. |
-| Why is it "real time" if it's a replay? | The pipeline processes each 1-second window as it would live traffic and must finish inside 1 s. We replay real flows so we have ground truth labels. Packet capture is the missing piece and is listed as a limitation. |
-| What is SHAP? | A game-theory method that gives each feature a share of the model's decision. TreeSHAP computes it exactly for tree models in polynomial time; Kernel SHAP approximates it for any model by sampling, which is why it's ~1,000× slower. |
-| What does EWMA do? | Exponentially weighted moving average of flows/s (alpha 0.1) and its variance. The z-score says how unusual the current window is compared with recent normal traffic. |
-| Why 3 windows to enter and 5 to leave? | Hysteresis: one noisy window shouldn't trigger ELEVATED, and we don't want to flap in and out during an attack. |
-| What changed since Review 2? | *(Fill in with any feedback you acted on after Review 2.)* What's complete now: real models on CIC-IDS2017, the explanation cap (p95 per window under stress 1,251 ms → 223 ms), the full paper with real numbers, and a README that lets anyone clone and run it. |
-| Why does the pipeline explain in ~0.5 ms but the benchmark says 2.4 ms? | The benchmark times one flow at a time; the pipeline explains a whole window's flagged flows in one batch, so the cost per flow is lower. |
+| Explanation time per flow | **TreeSHAP 2.4 ms vs Kernel SHAP ~2–2.6 s → ~800–1,100× faster** |
+| Accuracy (test set, 69,487 flows) | Macro F1 **0.972** (LightGBM), 0.986 (Random Forest) |
+| False alarms on normal traffic | **0.37%** |
+| Strong classes | DoS, DDoS, PortScan, BruteForce ≥ 0.998 F1 |
+| Weak classes | **WebAttack 0.86**, Bot 0.95 (the two smallest) |
+| Never-seen DoS (held out of training) | **37.8%** caught (Isolation Forest 33%, LightGBM 5%) |
+| Never-seen Bot | 0% caught |
+| Under stress (~1,100 flows/s) | **223 ms** per 1-second window at p95 |
+| Live demo | 6,550 alerts, **99.7% explained** |
+
+**"RF scores higher, why use LightGBM?"** Predicting one flow takes ~0.34 ms with LightGBM vs ~14 ms with RF (~40× slower), and TreeSHAP on a big RF is slower too. For a live system, speed matters as much as 1.4 F1 points.
+
+---
+
+## 9. Novelty, advantages, limitations
+
+### What's new
+
+1. **Live explanations, not offline.** Most explainable-IDS papers explain afterwards with Kernel SHAP. We explain every alert as it happens.
+2. **Measured speed-up.** TreeSHAP vs Kernel SHAP on the same models: ~800–1,100×.
+3. **Two-tier compute saving.** Heavy work only when traffic looks abnormal.
+4. **Known + unknown attacks.** Supervised + unsupervised model together, with a "low confidence" flag when they disagree.
+5. **Human sentences.** SHAP numbers turned into "above 99% of normal flows".
+6. **Bounded latency.** A per-window explanation budget keeps every second inside its 1-second deadline.
+
+### Advantages
+
+- Analyst sees **why**, not just **what**
+- Fast enough for live traffic, with proof
+- Saves compute when things are quiet
+- Catches some never-seen attacks (Isolation Forest)
+- No leakage: port, IP, flow ID, timestamps excluded
+- Reproducible: clone, install, run; fixed random seeds
+
+### Limitations (say these before she asks)
+
+| Limitation | Why it happens | How it could be fixed |
+|---|---|---|
+| **Slow attacks** slip past Tier 1 | Tier 1 only watches **total** volume; a slow scan barely changes it | Add per-destination counters (e.g. "distinct ports per source") to Tier 1 |
+| **Attacks that look normal** (Bot: 0% when unseen) | Isolation Forest at 1% FPR only catches clearly weird flows | Better unsupervised model, or accept more false alarms |
+| **WebAttack F1 0.86** | Only 321 test flows, and they look like normal web browsing | More data; features from HTTP content |
+| **Replayed, not live-captured** | We start from CSV rows, not packets | Add CICFlowMeter to turn live packets into flows |
+| **Unexplained alerts under extreme load** | Above 300 alerts in one second, the least confident are stored without a reason | Bigger budget or more CPU |
+| **One dataset from 2017** | One lab network | Test on CIC-IDS2018 / UNSW-NB15 |
+
+---
+
+## 10. Which files to know for Review 3
+
+| Member | Files | Be ready to explain |
+|---|---|---|
+| **Krishita** (pipeline + ML) | `pipeline/run.py`, `monitor.py`, `detector.py`, `explainer.py`, `ml/prepare.py`, `ml/train.py`, `ml/benchmark_explain.py`, `tests/` | EWMA + z-score + hysteresis · 10% vs 100% scoring · flag rule · TreeSHAP + percentile sentences · explanation cap · leakage removal · why 20 features · how the benchmark was run |
+| **Krish** (dashboard + paper) | `dashboard/app.py`, `dashboard/results.py`, `paper/paper.md` | How the dashboard reads the DB every second · each panel · low-confidence rule · Results tab |
+| **Vedika** (first ML version, paper, slides) | `ml/evaluate.py`, `ml/holdout.py`, `reports/`, slides | F1 / FPR / confusion matrix · leave-one-attack-out test · reading the result figures |
+| **Everyone** | `docs/PLAN.md`, `contracts/schema.sql`, `REVIEW3.md` | The problem, the claim, the architecture, the limitations |
+
+---
+
+## 11. Questions she may ask
+
+**What problem are you solving?**
+ML intrusion detectors give a label but no reason, and the usual way to get reasons (Kernel SHAP) is too slow for live traffic. We give a reason for every alert in real time.
+
+**What's novel?**
+Explanations live instead of offline, a measured ~800–1,100× speed-up from TreeSHAP, and a two-tier design that does heavy work only when traffic looks abnormal.
+
+**Why not deep learning?**
+Tree models are very accurate on table-style flow features, fast to run, and TreeSHAP gives *exact* explanations in milliseconds. Deep models would need slow approximate explainers, which defeats the purpose.
+
+**Why two models?**
+They do different jobs. LightGBM names known attacks. Isolation Forest only learned normal traffic, so it flags anything unusual. On never-seen DoS, LightGBM caught 5%, Isolation Forest 33%.
+
+**What is a z-score / EWMA?**
+EWMA is a running average where recent seconds count more. The z-score says how many standard deviations the current second is above that average. Above 3 is very unusual.
+
+**Why 3 windows to enter and 5 to leave?**
+So one noisy second doesn't trigger an alert, and the state doesn't flicker on and off during an attack. (We originally used 10 calm windows with z < 1, but with realistic random traffic it often never returned to NORMAL, so we changed it.)
+
+**Why 10% sampling? Doesn't that miss attacks?**
+In normal times, yes, we only see 10%. That's the trade-off, and it's exactly the slow-scan limitation. Once traffic jumps, we see 100%.
+
+**97% F1, is that too good? Any leakage?**
+We removed destination port, IPs, flow ID and timestamps, and dropped duplicate rows before splitting so the same flow can't be in both train and test. 0.97 is in line with published CIC-IDS2017 work, and WebAttack at 0.86 shows it isn't trivially perfect. Leakage usually shows up as > 99.5%.
+
+**Why is it "real time" if it's a replay?**
+Each 1-second window is processed exactly as live traffic would be, and has to finish within 1 second. Replaying lets us check every alert against the true label. Packet capture is the missing piece, listed as a limitation.
+
+**The benchmark says 2.4 ms but the dashboard shows ~0.5 ms. Why?**
+The benchmark times one flow at a time. The pipeline explains a whole second's flagged flows in one batch, which is cheaper per flow.
+
+**How did you measure Kernel SHAP?**
+`ml/benchmark_explain.py`: the same LightGBM model, Kernel SHAP with 100 benign flows as background, on 50 flagged flows (it's too slow for more), repeated 3 rounds, vs TreeSHAP on 200 flagged flows. TreeSHAP median 2.43 ms; Kernel SHAP median ~2.6 s. We report the speed-up as a range (~801–1,080×) because Kernel SHAP's time varies between rounds.
+
+**What does an alert explanation actually look like?**
+Real one: *"Flow Duration = 36 (below 92% of normal flows)"*, a port scan that knocked and left in 36 microseconds.
+
+**What's "low confidence"?**
+Both models looked at the flow but only one flagged it. We show ⚠ so the analyst knows to check.
+
+**What happens if 1,000 attacks arrive in one second?**
+All are detected and stored. Only the 300 most confident are explained; the rest are stored with "not explained: budget reached", so the window still finishes inside 1 second.
+
+**What's the dataset?**
+CIC-IDS2017 from the Canadian Institute for Cybersecurity: 5 days of a lab network with real attacks, already turned into flows with ~78 features each. We used the 8 CSVs, ~850 MB.
+
+**What changed since Review 2?**
+*(Fill in with the feedback you acted on.)* What's complete now: real models, the explanation cap, the full paper with real numbers, and a README that lets anyone clone and run it.
+
+**What would you do next?**
+Live packet capture with CICFlowMeter, a per-destination Tier-1 check to catch slow scans, and testing on newer datasets.
+
+---
+
+## 12. Cheat sheet (last 5 minutes before the review)
+
+- **Flow** = one network conversation. **Feature** = one measurement of it. We use **20**.
+- **Top 3 features** = the 3 that pushed *this* alert most, found by **SHAP**. Change per alert.
+- **TreeSHAP 2.4 ms vs Kernel SHAP ~2 s → ~800–1,100× faster.** ← headline
+- **Tier 1** = EWMA z-score on flow rate. ELEVATED after 3 windows z > 3; NORMAL after 5 windows z < 2.
+- **Tier 2** = NORMAL: LightGBM on 10%. ELEVATED: LightGBM + Isolation Forest on 100%.
+- **Cap** = max 300 explanations per second → p95 223 ms per window under stress.
+- **Macro F1 0.972**, false alarms **0.37%**, WebAttack weakest (0.86).
+- **Never-seen DoS: 37.8% caught**; never-seen Bot: 0%.
+- **Demo:** 6,550 alerts, 99.7% explained.
+- **Main limitation:** slow attacks don't trigger Tier 1.
+- **No leakage:** no port, IP, flow ID or timestamp as features.
