@@ -7,7 +7,7 @@ School of Computer Science and Engineering, Vellore Institute of Technology
 
 ## Abstract
 
-Traffic monitoring tools typically separate traffic visibility from security alerts. When a machine-learning detector raises an alert, the analyst receives a label without reasoning. Explainable intrusion detection work almost always attaches SHAP explanations to alerts, but offline and usually with Kernel SHAP, a model-agnostic estimating technique, that is far too slow to perform per connection on live traffic. We claim that per-flow explanations are cheap enough for real-time monitoring with the combination of two designs: tree-based detectors explained with TreeSHAP, which computes exact Shapley values in polynomial time, and a two-tier architecture that runs full scoring and explanation only when abnormal traffic is observed. We implement this design as FlowLens, which replays labelled CIC-IDS2017 flows as a one-second-window stream. An EWMA monitor switches between NORMAL and ELEVATED states. LightGBM classifies known attack types, an Isolation Forest trained only on benign traffic detects unseen ones, and TreeSHAP presents the top contributing features in an understandable form on a live dashboard. On the test split, LightGBM reaches a macro F1 of 0.972 with a benign false-positive rate of 0.37%. TreeSHAP explains a flow in 2.426 ms at the median, against 2,616.5 ms for Kernel SHAP, a ~800–1,100× speed-up. With at most 300 explanations per window, end-to-end processing takes 223.4 ms per one-second window at the 95th percentile under stress load. Unseen attacks remain the weak point: with DoS withheld from training, LightGBM alone caught 4.9% of its flows, the Isolation Forest 33.0% and the two together 37.8%, and with Bot withheld neither detector caught any. Low-and-slow attacks that do not change traffic volume are caught only at the sampling rate.
+Traffic monitoring tools typically separate traffic visibility from security alerts. When a machine-learning detector raises an alert, the analyst receives a label without reasoning. Explainable intrusion detection work almost always attaches SHAP explanations to alerts, but offline and usually with Kernel SHAP, a model-agnostic estimating technique, that is far too slow to perform per connection on live traffic. We claim that per-flow explanations are cheap enough for real-time monitoring with the combination of two designs: tree-based detectors explained with TreeSHAP, which computes exact Shapley values in polynomial time, and a two-tier architecture that runs full scoring and explanation only when abnormal traffic is observed. We implement this design as FlowLens, which replays labelled CIC-IDS2017 flows as a one-second-window stream. An EWMA monitor switches between NORMAL and ELEVATED states. LightGBM classifies known attack types, an Isolation Forest trained only on benign traffic detects unseen ones, and TreeSHAP presents the top contributing features in an understandable form on a live dashboard. On the test split, LightGBM reaches a macro F1 of 0.987 with a benign false-positive rate of 0.18%. TreeSHAP explains a flow in 2.277 ms at the median, against 2,134.3 ms for Kernel SHAP, a ~800–1,000× speed-up. With at most 300 explanations per window, end-to-end processing takes 185.8 ms per one-second window at the 95th percentile under stress load. Unseen attacks remain the weak point: with DoS withheld from training, LightGBM alone caught 4.4% of its flows, the Isolation Forest 47.8% and the two together 51.6%, and with Bot withheld neither detector caught any. Low-and-slow attacks that do not change traffic volume are caught only at the sampling rate.
 
 **Keywords:** network anomaly detection, explainable AI, SHAP, TreeSHAP, LightGBM, Isolation Forest, real-time monitoring, CIC-IDS2017
 
@@ -96,13 +96,11 @@ WebAttack and Bot remain small even after capping the large classes: the test se
 
 All models are trained by one command (`python ml/train.py`, about 30 seconds on a laptop) with fixed random seeds.
 
-**LightGBM classifier.** A multiclass LightGBM model with 200 trees and otherwise default parameters predicts one of the seven classes. Classes are weighted inversely to their frequency (`class_weight='balanced'`), because without weighting the model barely learned the rare classes: validation macro F1 fell to 0.52. To keep inference fast and explanations readable, we first train on all 76 features, rank them by gain importance, and retrain on the top 20. On the validation set the full model reaches a macro F1 of 0.990 and the 20-feature model 0.972, a drop of 1.8 points, which is within the 1–2 points we accepted in exchange for shorter explanations. The 20-feature model is the one used everywhere else. Its features are, in order of importance:
+**LightGBM classifier.** A multiclass LightGBM model with 200 trees predicts one of the seven classes. Classes are weighted inversely to their frequency (`class_weight='balanced'`), because without weighting the model barely learned the rare classes: validation macro F1 fell to 0.48. Each feature is bucketed into up to 1,023 histogram bins (`max_bin=1023`) instead of LightGBM's default 255. With the default bins, the model confused benign web flows with WebAttack (validation WebAttack F1 0.85); the finer bins raise it to 0.95 and cut the benign false-positive rate from 0.36% to 0.20%. Neither softer class weights, more trees nor more leaves had any effect, and 16,383 bins made training diverge. To keep inference fast and explanations readable, we first train on all 76 features, rank them by gain importance, and retrain on the top 20. On the validation set the full model reaches a macro F1 of 0.989 and the 20-feature model 0.987, a drop of 0.2 points. The 20-feature model is the one used everywhere else. Its features are, in order of importance:
 
-`Init_Win_bytes_backward`, `Flow Duration`, `Bwd Header Length`, `Total Length of Bwd Packets`, `Bwd Packet Length Min`, `Bwd IAT Min`, `Idle Min`, `PSH Flag Count`, `Fwd Header Length`, `min_seg_size_forward`, `Fwd PSH Flags`, `Total Backward Packets`, `Init_Win_bytes_forward`, `Flow IAT Max`, `Idle Mean`, `Total Length of Fwd Packets`, `Bwd Packet Length Std`, `act_data_pkt_fwd`, `Packet Length Std`, `Fwd Packet Length Std`.
+`Init_Win_bytes_backward`, `Flow Duration`, `Bwd Header Length`, `Total Length of Bwd Packets`, `Bwd Packet Length Min`, `Bwd IAT Min`, `PSH Flag Count`, `Fwd Header Length`, `Idle Mean`, `min_seg_size_forward`, `Idle Min`, `Fwd PSH Flags`, `Total Backward Packets`, `Init_Win_bytes_forward`, `Flow IAT Max`, `Total Length of Fwd Packets`, `Bwd Packet Length Std`, `Fwd IAT Max`, `Packet Length Std`, `act_data_pkt_fwd`.
 
-Most of the loss falls on WebAttack, where the 20-feature model confuses some benign web flows with attacks. A softer class weighting (the square root of the balanced weights) gave the same result, so we kept the balanced weights.
-
-**Isolation Forest.** An Isolation Forest with 100 trees (256 samples per tree, the default) is trained on the 209,999 benign training flows only, using the same 20 features. Its anomaly score is `score_samples`, where lower means more anomalous. The decision threshold is the 1st percentile of the scores of benign validation flows (−0.665), so about 1% of benign flows are flagged; on the test set the rate is 0.93%. Because it never sees attack labels, it is the detector intended for attack types missing from the classifier's training data.
+**Isolation Forest.** An Isolation Forest with 100 trees (256 samples per tree, the default) is trained on the 209,999 benign training flows only, using the same 20 features. Its anomaly score is `score_samples`, where lower means more anomalous. The decision threshold is the 1st percentile of the scores of benign validation flows (−0.674), so about 1% of benign flows are flagged; on the test set the rate is 0.90%. Because it never sees attack labels, it is the detector intended for attack types missing from the classifier's training data.
 
 **Random Forest baseline.** A 100-tree Random Forest on the same 20 features provides a baseline for the classifier's accuracy. It is not used in the streaming pipeline.
 
@@ -174,9 +172,9 @@ Each alert stores the three features as JSON, each with its name, value, contrib
 
 #### Per-window explanation cap
 
-Explaining every flagged flow does not fit in a one-second window under heavy attack traffic. In the stress scenario below, the ELEVATED state explained 88% of about 1,560 flows per second. At roughly 0.55 ms per flow, that is close to 800 ms of explanation work per window before detection and database writes, and end-to-end latency reached 1,251 ms per window at the 95th percentile, over the 1,000 ms budget.
+Explaining every flagged flow does not fit in a one-second window under heavy attack traffic. In the stress scenario below, the ELEVATED state explained 88% of about 1,560 flows per second. At roughly 0.5 ms per flow, that is close to 700 ms of explanation work per window before detection and database writes, and end-to-end latency reached 976–1,245 ms per window at the 95th percentile over three runs, at or over the 1,000 ms budget.
 
-The pipeline therefore explains at most 300 flagged flows per window (`--explain-cap`, default 300). At about 0.55 ms per flow, 300 explanations keep explanation work around 165 ms per window, well under the 1,000 ms budget. In the demonstration scenario the cap covers every window except the single busiest one (314 alerts), so 99.7% of demo alerts are explained. When a window has more flagged flows than the cap, the most confident ones are explained first: flows flagged by LightGBM (alone or with the Isolation Forest) in order of predicted-class probability, then flows flagged only by the Isolation Forest, most anomalous score first. The remaining flows are still stored as alerts, with their prediction and scores, but with no top features and the explanation "Not explained: per-window explanation budget reached". The `explained` count in `traffic_windows` records only the flows that were actually explained.
+The pipeline therefore explains at most 300 flagged flows per window (`--explain-cap`, default 300). At about 0.5 ms per flow, 300 explanations keep explanation work around 150 ms per window, well under the 1,000 ms budget. In the demonstration scenario the cap covers every window except the single busiest one (314 alerts), so 99.7% of demo alerts are explained. When a window has more flagged flows than the cap, the most confident ones are explained first: flows flagged by LightGBM (alone or with the Isolation Forest) in order of predicted-class probability, then flows flagged only by the Isolation Forest, most anomalous score first. The remaining flows are still stored as alerts, with their prediction and scores, but with no top features and the explanation "Not explained: per-window explanation budget reached". The `explained` count in `traffic_windows` records only the flows that were actually explained.
 
 ### Latency Evaluation
 
@@ -187,9 +185,9 @@ Latency is measured with a stress scenario of five 20-second segments: benign tr
 - **End-to-end latency per window:** the time from receiving a window to finishing the database writes for it.
 - **Work per state:** the share of flows scored and explained in NORMAL and in ELEVATED windows.
 
-On the final models, the stress scenario replayed 108,111 flows in 100 windows, 62 of them ELEVATED. Detection latency was 0.014 ms per flow at the median and 0.019 ms at the 95th percentile. Explanation latency was 0.54 ms and 0.60 ms. This is lower than the 2.4 ms per flow measured for TreeSHAP in the explainer benchmark, because the pipeline explains each window's flows in one batch rather than one call per flow. End-to-end latency per window was 194 ms at the median and 223 ms at the 95th percentile, compared with the window length of 1,000 ms. Without the explanation cap, the same scenario took 627 ms and 1,251 ms.
+On the final models, the stress scenario replayed 108,111 flows in 100 windows, 62 of them ELEVATED. Detection latency was 0.013 ms per flow at the median and 0.015 ms at the 95th percentile. Explanation latency was 0.46 ms and 0.49 ms. This is lower than the 2.3 ms per flow measured for TreeSHAP in the explainer benchmark, because the pipeline explains each window's flows in one batch rather than one call per flow. End-to-end latency per window was 166 ms at the median and 186 ms at the 95th percentile, compared with the window length of 1,000 ms; over three runs the 95th percentile ranged from 186 to 225 ms. Without the explanation cap, the same scenario took 502–629 ms at the median and 976–1,245 ms at the 95th percentile.
 
-In NORMAL windows, 9.97% of flows were scored and 2.55% explained. In ELEVATED windows, 100% were scored and 17.95% explained; without the cap, 88.19% were explained. In the demonstration scenario the cap explained 6,533 of 6,550 alerts (99.7%).
+In NORMAL windows, 9.97% of flows were scored and 2.55% explained. In ELEVATED windows, 100% were scored and 17.95% explained; without the cap, 88.16% were explained. In the demonstration scenario the cap explained 6,521 of 6,538 alerts (99.7%).
 
 ### Limitations
 
@@ -223,19 +221,19 @@ All numbers below are generated by the scripts in `ml/` and `pipeline/` and fill
 
 ### Classification
 
-Table 1 compares LightGBM with the Random Forest baseline on the test split. LightGBM reaches a macro F1 of 0.972 with a benign false-positive rate of 0.37%; the Random Forest reaches 0.986 and 0.14%.
+Table 1 compares LightGBM with the Random Forest baseline on the test split. LightGBM reaches a macro F1 of 0.987 with a benign false-positive rate of 0.18%; the Random Forest reaches 0.986 and 0.15%.
 
 **Table 1.** Per-class F1 on the test split.
 
 | Class | LightGBM | Random Forest |
 |---|---|---|
-| BENIGN | 0.998 | 0.999 |
+| BENIGN | 0.999 | 0.999 |
 | DoS | 0.998 | 0.998 |
 | DDoS | 0.999 | 0.999 |
-| PortScan | 0.999 | 0.998 |
+| PortScan | 0.998 | 0.998 |
 | BruteForce | 0.999 | 0.999 |
-| WebAttack | 0.859 | 0.972 |
-| Bot | 0.950 | 0.933 |
+| WebAttack | 0.964 | 0.969 |
+| Bot | 0.949 | 0.942 |
 
 WebAttack is the hardest class for LightGBM (F1 0.859): it catches 99% of web attacks, but 98 benign test flows are also labelled WebAttack, so precision is 0.76. The Random Forest handles it better (0.972). Bot (0.950) is the other weak class; these are the two smallest classes, with about 300 test flows each. The confusion matrix is in `reports/figures/confusion_lgbm.png`.
 
@@ -247,7 +245,7 @@ To estimate behaviour on an attack type the classifier has never seen, LightGBM 
 
 | Held-out class | LightGBM alone | Isolation Forest alone | Either |
 |---|---|---|---|
-| DoS | 4.9% | 33.0% | 37.8% |
+| DoS | 4.4% | 47.8% | 51.6% |
 | Bot | 0.0% | 0.0% | 0.0% |
 
 Once LightGBM has not seen Bot, neither detector catches it: all 292 flows are classified BENIGN and none fall below the Isolation Forest threshold. For DoS, LightGBM alone catches 4.9% (it labels 7,135 of 7,500 flows BENIGN), while the Isolation Forest catches 33.0%, so the two together reach 37.8%. The Isolation Forest adds coverage for volumetric attacks, but not for attacks whose flows look normal.
@@ -260,14 +258,14 @@ The headline measurement times both explainers per flow on the same LightGBM mod
 
 | Explainer | Mean | p50 | p95 | Flows |
 |---|---|---|---|---|
-| TreeSHAP | 2.424 | 2.426 | 2.507 | 200 |
-| Kernel SHAP | 2,618.2 | 2,616.5 | 2,982.1 | 50 |
+| TreeSHAP | 2.269 | 2.277 | 2.342 | 200 |
+| Kernel SHAP | 2,162.4 | 2,134.3 | 2,447.1 | 50 |
 
-TreeSHAP's median latency is 2.426 ms per flow against 2,616.5 ms for Kernel SHAP. Kernel SHAP's timing varied from run to run, so we report the speed-up as a range over three Kernel SHAP rounds: ~800–1,100× at the median. At Kernel SHAP's speed a single flow takes longer to explain than the whole one-second window. TreeSHAP, run in one batch per window inside the pipeline, costs about half a millisecond per flow (next section), so hundreds of explanations fit in a window. Figure: `reports/figures/shap_latency.png`.
+TreeSHAP's median latency is 2.277 ms per flow against 2,134.3 ms for Kernel SHAP. Kernel SHAP's timing varied from run to run, so we report the speed-up as a range over three Kernel SHAP rounds: ~800–1,000× at the median. At Kernel SHAP's speed a single flow takes longer to explain than the whole one-second window. TreeSHAP, run in one batch per window inside the pipeline, costs about half a millisecond per flow (next section), so hundreds of explanations fit in a window. Figure: `reports/figures/shap_latency.png`.
 
 ### Pipeline latency and the cost of tiering
 
-Under the stress scenario (Section *Latency Evaluation*), detection took 0.014 ms per flow at the median (0.019 ms at p95), and explanation 0.543 ms (0.603 ms at p95). End-to-end processing of a whole window took 194.1 ms at the median and 223.4 ms at p95, against the window length of 1,000 ms. This relies on the cap of 300 explanations per window; without it, the same scenario reached 1,251 ms at p95 (Section *Per-window explanation cap*).
+Under the stress scenario (Section *Latency Evaluation*), detection took 0.013 ms per flow at the median (0.015 ms at p95), and explanation 0.456 ms (0.488 ms at p95). End-to-end processing of a whole window took 165.5 ms at the median and 185.8 ms at p95, against the window length of 1,000 ms. This relies on the cap of 300 explanations per window; without it, the same scenario reached 1,251 ms at p95 (Section *Per-window explanation cap*).
 
 **Table 4.** Work done per Tier-1 state under the stress scenario.
 
@@ -296,7 +294,7 @@ In NORMAL windows only about a tenth of flows are scored, and 2.5% are explained
 
 ## Conclusion
 
-The claim that SHAP is too slow for live intrusion detection is true of Kernel SHAP but not of SHAP in general. With tree-based detectors, TreeSHAP computes exact explanations in about 2.426 ms per flow, ~800–1,100× faster than Kernel SHAP, and a two-tier design limits full scoring and explanation to the periods when traffic is abnormal. Together with a cap on explanations per window, these keep per-flow explanations within a one-second window even under stress load. FlowLens explains alerts in plain language and shows them on a dashboard that joins traffic visibility and security alerting in one view. Its classifier is accurate on known attacks (macro F1 0.972). Its Isolation Forest, intended for unseen attacks, helps against volumetric ones but misses attacks whose flows look normal.
+The claim that SHAP is too slow for live intrusion detection is true of Kernel SHAP but not of SHAP in general. With tree-based detectors, TreeSHAP computes exact explanations in about 2.277 ms per flow, ~800–1,000× faster than Kernel SHAP, and a two-tier design limits full scoring and explanation to the periods when traffic is abnormal. Together with a cap on explanations per window, these keep per-flow explanations within a one-second window even under stress load. FlowLens explains alerts in plain language and shows them on a dashboard that joins traffic visibility and security alerting in one view. Its classifier is accurate on known attacks (macro F1 0.987). Its Isolation Forest, intended for unseen attacks, helps against volumetric ones but misses attacks whose flows look normal.
 
 Future work includes capturing live traffic instead of replaying records, adding volume-independent triggers to Tier 1 so that low-and-slow attacks are caught beyond the sampling rate, stronger detectors for unseen attacks, and a user study measuring whether the explanations shorten an analyst's triage.
 

@@ -5,18 +5,18 @@
   "Total Length of Bwd Packets",
   "Bwd Packet Length Min",
   "Bwd IAT Min",
-  "Idle Min",
   "PSH Flag Count",
   "Fwd Header Length",
+  "Idle Mean",
   "min_seg_size_forward",
+  "Idle Min",
   "Fwd PSH Flags",
   "Total Backward Packets",
   "Init_Win_bytes_forward",
   "Flow IAT Max",
-  "Idle Mean",
   "Total Length of Fwd Packets",
   "Bwd Packet Length Std",
-  "act_data_pkt_fwd",
+  "Fwd IAT Max",
   "Packet Length Std",
-  "Fwd Packet Length Std"
+  "act_data_pkt_fwd"
 ]

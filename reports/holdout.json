@@ -1,15 +1,14 @@
 {
   "DoS": {
-    "lgbm_recall": 0.048666666666666664,
-    "iforest_recall": 0.3296,
-    "either_recall": 0.37826666666666664,
+    "lgbm_recall": 0.044,
+    "iforest_recall": 0.47813333333333335,
+    "either_recall": 0.5164,
     "n_flows": 7500,
     "lgbm_predicted_as": {
-      "BENIGN": 7135,
-      "PortScan": 283,
-      "WebAttack": 78,
-      "DDoS": 3,
-      "BruteForce": 1
+      "BENIGN": 7170,
+      "PortScan": 226,
+      "WebAttack": 101,
+      "DDoS": 3
     }
   },
   "Bot": {

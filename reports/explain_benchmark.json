@@ -1,22 +1,22 @@
 {
   "tree_shap": {
-    "mean_ms": 2.42356511997059,
-    "p50_ms": 2.42562557104975,
-    "p95_ms": 2.507097483612597,
+    "mean_ms": 2.2691837550519267,
+    "p50_ms": 2.276833496580366,
+    "p95_ms": 2.3424107414030004,
     "n_flows": 200
   },
   "kernel_shap": {
-    "mean_ms": 2618.228440019302,
-    "p50_ms": 2616.5110629517585,
-    "p95_ms": 2982.1004811441526,
+    "mean_ms": 2162.432089119975,
+    "p50_ms": 2134.3103329927544,
+    "p95_ms": 2447.107187797519,
     "n_flows": 50,
     "rounds": 3
   },
   "speedup_p50_range": [
-    801.0406515848917,
-    1080.111143160396
+    844.4323291043613,
+    989.6031059688297
   ],
-  "speedup_note": "~801-1,080x at the median, across 3 Kernel SHAP rounds",
+  "speedup_note": "~844-990x at the median, across 3 Kernel SHAP rounds",
   "kernel_background": 100,
-  "flagged_test_flows": 25055
+  "flagged_test_flows": 24958
 }
