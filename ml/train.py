@@ -24,7 +24,9 @@ NON_FEATURES = ["label", "dst_port"]  # dst_port leaks the answer: never a featu
 
 
 def train_lgbm(X, y):
-    model = LGBMClassifier(n_estimators=200, class_weight="balanced", random_state=SEED, verbose=-1)
+    # max_bin=1023: the default 255 histogram bins are too coarse to separate WebAttack from BENIGN
+    # (val WebAttack F1 0.85 -> 0.95); 16383 bins made training diverge
+    model = LGBMClassifier(n_estimators=200, max_bin=1023, class_weight="balanced", random_state=SEED, verbose=-1)
     model.fit(X, y)
     return model
 
